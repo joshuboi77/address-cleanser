@@ -5,6 +5,7 @@ A Python CLI tool for parsing, validating, and formatting US addresses according
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![CI](https://github.com/joshuboi77/address-cleanser/workflows/CI/badge.svg)](https://github.com/joshuboi77/address-cleanser/actions)
 
 ## Features
 
@@ -414,7 +415,7 @@ address-cleaner/
 │   ├── test_parser.py
 │   ├── test_validator.py
 │   └── test_integration.py
-├── out/                   # Sample data
+├── out/                   # Sample data (contains sample_input.csv)
 ├── logs/                  # Runtime logs
 ├── requirements.txt
 ├── install.sh
