@@ -6,7 +6,7 @@
 
 # Testing
 pytest>=7.0.0,<8.4.0
-pytest-cov>=7.0.0
+pytest-cov>=4.0.0,<6.0.0
 psutil>=6.1.1
 
 # Code quality
