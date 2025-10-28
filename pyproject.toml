@@ -38,7 +38,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.4.2",
+    "pytest>=7.0.0,<8.4.0",
     "pytest-cov>=7.0.0",
     "psutil>=6.1.1",
     "black>=24.0.0",
@@ -57,7 +57,7 @@ Documentation = ""
 "Bug Tracker" = ""
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "7.0"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
