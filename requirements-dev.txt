@@ -1,0 +1,25 @@
+# Development dependencies for Address Cleanser
+# Install with: pip install -r requirements-dev.txt
+
+# Base requirements
+-r requirements.txt
+
+# Testing
+pytest>=8.4.2
+pytest-cov>=7.0.0
+psutil>=6.1.1
+
+# Code quality
+black>=24.0.0
+flake8>=7.0.0
+isort>=5.13.0
+mypy>=1.8.0
+
+# Type stubs
+types-tqdm>=4.66.0
+pandas-stubs>=2.0.0
+
+# Development tools
+ipython>=8.12.0
+ipdb>=0.13.13
+
