@@ -51,10 +51,10 @@ dev = [
 address-cleanser = "cli:cli"
 
 [project.urls]
-Homepage = ""
-Repository = ""
-Documentation = ""
-"Bug Tracker" = ""
+Homepage = "https://github.com/joshuboi77/address-cleanser"
+Repository = "https://github.com/joshuboi77/address-cleanser"
+Documentation = "https://github.com/joshuboi77/address-cleanser#readme"
+"Bug Tracker" = "https://github.com/joshuboi77/address-cleanser/issues"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
