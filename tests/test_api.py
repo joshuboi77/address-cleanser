@@ -4,8 +4,17 @@ Tests for Address Cleanser API endpoints.
 These tests verify the REST API functionality.
 """
 
+import sys
+
 import pytest
 from fastapi.testclient import TestClient
+
+# Handle ExceptionGroup on Python < 3.11
+if sys.version_info < (3, 11):
+    try:
+        import exceptiongroup
+    except ImportError:
+        pass
 
 
 @pytest.fixture
@@ -14,7 +23,10 @@ def api_client():
     try:
         from api_server import app
 
-        return TestClient(app)
+        client = TestClient(app)
+        yield client
+        # Clean up any background tasks
+        client.__exit__(None, None, None)
     except ImportError:
         pytest.skip("FastAPI dependencies not installed")
 
