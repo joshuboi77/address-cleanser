@@ -36,4 +36,3 @@ def pytest_runtest_makereport(item, call):
                 # Mark as passed since this is a known TestClient issue, not a real failure
                 rep.outcome = "passed"
                 rep.wasxfail = False
-
