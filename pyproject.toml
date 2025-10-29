@@ -69,7 +69,6 @@ addopts = [
     "--cov=src",
     "--cov-report=term-missing",
     "--cov-report=html",
-    "-W", "ignore::exceptiongroup.ExceptionGroup",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
