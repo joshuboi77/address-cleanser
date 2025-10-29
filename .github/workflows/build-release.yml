@@ -8,6 +8,7 @@ on:
 
 env:
   DEVELOPER_ID: ${{ secrets.DEVELOPER_ID }}
+  DEVELOPER_ID_INSTALLER: ${{ secrets.DEVELOPER_ID_INSTALLER }}
   APPLE_ID: ${{ secrets.APPLE_ID }}
   TEAM_ID: ${{ secrets.TEAM_ID }}
   APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
@@ -47,12 +48,12 @@ jobs:
         create_universal_binary()
         "
     
-    - name: macOS Distribution (macOS only)
+    - name: Clean Distribution (macOS only)
       if: matrix.os == 'macos-latest'
       run: |
-        python scripts/macos_distribution.py dist/address-cleanser-darwin-universal \
-          --output-dir dist/macos-distribution \
-          --version ${{ github.ref_name }}
+        # Use the new clean distribution script
+        chmod +x packaging/distribute.sh
+        ./packaging/distribute.sh ${{ github.ref_name }} arm64
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -95,9 +96,9 @@ jobs:
         cp address-cleanser-macos-latest/* release-assets/ 2>/dev/null || true
         cp checksums/checksums.txt release-assets/ 2>/dev/null || true
         
-        # Copy macOS distribution files
-        if [ -d "address-cleanser-macos-latest/macos-distribution" ]; then
-          cp address-cleanser-macos-latest/macos-distribution/* release-assets/ 2>/dev/null || true
+        # Copy macOS clean distribution files
+        if [ -d "address-cleanser-macos-latest/release" ]; then
+          cp address-cleanser-macos-latest/release/* release-assets/ 2>/dev/null || true
         fi
         
         # Create archive with all executables
@@ -113,11 +114,11 @@ jobs:
         body: |
           ## Address Cleanser ${{ github.ref_name }}
           
-          ### 🚀 Quick Installation
+          ### Quick Installation
           
           **One-line installer (macOS/Linux):**
           ```bash
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/joshuboi77/address-cleanser/main/install.sh)"
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/joshuboi77/address-cleanser/main/packaging/install.sh)"
           ```
           
           **Homebrew (macOS):**
@@ -126,7 +127,7 @@ jobs:
           brew install address-cleanser
           ```
           
-          ### 📦 Downloads
+          ### Downloads
           
           **All Platforms Archive:**
           - `address-cleanser-all-platforms.tar.gz` (Linux/macOS)
@@ -135,35 +136,22 @@ jobs:
           **Individual Executables:**
           - `address-cleanser-linux-*` - Linux executable
           - `address-cleanser-windows-*.exe` - Windows executable  
-          - `address-cleanser-darwin-*` - macOS executable (Intel)
-          - `address-cleanser-darwin-universal` - macOS Universal2 (Intel + Apple Silicon)
+          - `address-cleanser-macos-arm64.zip` - macOS ZIP (Apple Silicon)
           
-          **macOS Distribution Packages:**
-          - `address-cleanser-darwin-universal.zip` - Signed & notarized ZIP
-          - `address-cleanser-darwin-universal.pkg` - PKG installer (GUI-friendly)
+          **macOS Distribution:**
+          - `address-cleanser-macos-arm64.zip` - Signed & notarized ZIP
+          - `address-cleanser-user.pkg` - Per-user PKG installer (no admin required)
           - `address-cleanser.rb` - Homebrew formula
           - `install.sh` - One-line installer script
+          - `checksums.txt` - File integrity verification
           
-          ### 🔐 Security & Verification
-          
-          **macOS Security:**
-          - All macOS binaries are codesigned with Developer ID
-          - ZIP and PKG packages are notarized by Apple
-          - No quarantine flags or xattr removal needed
-          
-          **File Integrity:**
-          Verify file integrity using the provided checksums:
-          ```bash
-          sha256sum -c checksums.txt
-          ```
-          
-          ### 💻 Platform-Specific Installation
+          ### Installation Options
           
           **macOS:**
-          - **Best UX**: Download `address-cleanser-darwin-universal.zip` and extract
-          - **GUI Installer**: Double-click `address-cleanser-darwin-universal.pkg`
+          - **ZIP**: Download `address-cleanser-macos-arm64.zip`, extract, run
+          - **PKG**: Download `address-cleanser-user.pkg`, installs to ~/.local/bin
           - **Homebrew**: `brew tap joshuboi77/homebrew-address-cleanser && brew install address-cleanser`
-          - **One-liner**: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/joshuboi77/address-cleanser/main/install.sh)"`
+          - **One-liner**: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/joshuboi77/address-cleanser/main/packaging/install.sh)"`
           
           **Linux:**
           ```bash
@@ -174,9 +162,8 @@ jobs:
           **Windows:**
           - Download `address-cleanser-windows-*.exe`
           - Run from Command Prompt or PowerShell
-          - May need to allow execution in Windows Defender
           
-          ### 🎯 Usage Examples
+          ### Usage Examples
           
           ```bash
           # Process a single address
@@ -189,19 +176,18 @@ jobs:
           address-cleanser batch --input addresses.csv --output cleaned.csv --report validation.txt
           ```
           
-          ### 🔧 Troubleshooting
+          ### Security & Verification
           
-          **macOS Gatekeeper Issues:**
-          - Use the signed ZIP or PKG packages (no manual steps needed)
-          - Avoid downloading raw files from GitHub browser
+          **macOS Security:**
+          - All macOS binaries are codesigned with Developer ID
+          - ZIP and PKG packages are notarized by Apple
+          - No quarantine flags or manual steps needed
           
-          **Permission Denied:**
-          - Linux/macOS: `chmod +x address-cleanser-*`
-          - Windows: Run as Administrator or allow in Windows Defender
-          
-          **Model Training Warning:**
-          - The tool includes a pre-trained model
-          - If you see training warnings, the model is being downloaded automatically
+          **File Integrity:**
+          Verify file integrity using the provided checksums:
+          ```bash
+          sha256sum -c checksums.txt
+          ```
         draft: false
         prerelease: false
       env:

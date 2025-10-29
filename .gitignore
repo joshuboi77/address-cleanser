@@ -167,3 +167,9 @@ docs/
 *.tmp
 temp/
 tmp/
+
+# Build artifacts (clean distribution)
+*.zip
+*.pkg
+*.dmg
+.address-cleanser-work

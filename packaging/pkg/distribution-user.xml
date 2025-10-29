@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+  <title>Address Cleanser</title>
+  <organization>com.address-cleanser</organization>
+  <options customize="never" require-scripts="true"/>
+  <domains enable_localSystem="false" enable_currentUserHome="true" enable_anywhere="false"/>
+  <choices-outline>
+    <line choice="main"/>
+  </choices-outline>
+  <choice id="main" visible="false">
+    <pkg-ref id="com.address-cleanser.pkg"/>
+  </choice>
+  <pkg-ref id="com.address-cleanser.pkg" auth="Root">#address-cleanser.pkg</pkg-ref>
+</installer-gui-script>
