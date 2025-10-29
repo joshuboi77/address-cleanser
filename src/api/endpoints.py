@@ -206,4 +206,3 @@ async def get_stats() -> StatsResponse:
     stats = service.get_stats()
 
     return StatsResponse(**stats)
-

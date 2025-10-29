@@ -153,4 +153,3 @@ class TestRateLimiting:
         for _ in range(10):
             response = api_client.get("/api/v1/health")
             assert response.status_code == 200
-

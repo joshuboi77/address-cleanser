@@ -76,4 +76,3 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             )
 
         return await call_next(request)
-

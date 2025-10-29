@@ -26,7 +26,10 @@ RATE_LIMIT = int(os.getenv("RATE_LIMIT", "60"))  # requests per minute
 # Create FastAPI app
 app = FastAPI(
     title="Address Cleanser API",
-    description="REST API for parsing, validating, and formatting US addresses according to USPS Publication 28 standards",
+    description=(
+        "REST API for parsing, validating, and formatting US addresses "
+        "according to USPS Publication 28 standards"
+    ),
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -60,7 +63,9 @@ async def root():
         "version": "1.0.0",
         "docs": "/docs",
         "health": "/api/v1/health",
-        "authentication": "X-API-Key header required" if API_KEYS else "No authentication required",
+        "authentication": (
+            "X-API-Key header required" if API_KEYS else "No authentication required"
+        ),
     }
 
 
@@ -69,4 +74,3 @@ if __name__ == "__main__":
 
     port = int(os.getenv("PORT", "8000"))
     uvicorn.run(app, host="0.0.0.0", port=port)
-

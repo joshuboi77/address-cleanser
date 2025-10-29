@@ -21,9 +21,7 @@ class SingleAddressRequest(BaseModel):
     """Request model for single address validation."""
 
     address: str = Field(..., description="Address string to validate and format")
-    options: Optional[ValidationOptions] = Field(
-        default=None, description="Processing options"
-    )
+    options: Optional[ValidationOptions] = Field(default=None, description="Processing options")
 
 
 class BatchAddressRequest(BaseModel):
@@ -53,17 +51,13 @@ class SingleAddressResponse(BaseModel):
     """Response model for single address validation."""
 
     formatted: str = Field(..., description="USPS-formatted address string")
-    parsed: Optional[Dict[str, Any]] = Field(
-        default=None, description="Parsed address components"
-    )
+    parsed: Optional[Dict[str, Any]] = Field(default=None, description="Parsed address components")
     valid: ValidationResult = Field(..., description="Validation results")
     confidence: Optional[float] = Field(
         default=None, description="Parsing confidence score (0-100)"
     )
     errors: List[str] = Field(default_factory=list, description="List of errors or warnings")
-    original: Optional[str] = Field(
-        default=None, description="Original address string"
-    )
+    original: Optional[str] = Field(default=None, description="Original address string")
 
 
 class BatchSummary(BaseModel):
@@ -100,4 +94,3 @@ class StatsResponse(BaseModel):
     total_errors: int = Field(..., description="Total errors encountered")
     average_confidence: float = Field(..., description="Average confidence score")
     recent_error_count: int = Field(..., description="Recent error count")
-

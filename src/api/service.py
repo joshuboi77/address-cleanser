@@ -66,7 +66,9 @@ class AddressService:
                 normalized = normalize_components(parsed_dict)
 
             validated_result = (
-                validate_address(normalized) if normalized else {"valid": False, "issues": ["No parsed components"]}
+                validate_address(normalized)
+                if normalized
+                else {"valid": False, "issues": ["No parsed components"]}
             )
 
             # Format the address
@@ -210,4 +212,3 @@ def get_address_service() -> AddressService:
     if _address_service is None:
         _address_service = AddressService()
     return _address_service
-
