@@ -37,4 +37,3 @@ def pytest_runtest_makereport(item, call):
                 rep.outcome = "passed"
                 rep.wasxfail = False
 
-
