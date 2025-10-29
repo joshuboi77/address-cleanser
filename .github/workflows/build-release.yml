@@ -1,0 +1,126 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.11']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-build.txt
+    
+    - name: Build executable
+      run: |
+        python scripts/build_executable.py
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: address-cleanser-${{ matrix.os }}
+        path: dist/
+    
+    - name: Create checksums
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        cd dist
+        sha256sum * > checksums.txt
+    
+    - name: Upload checksums
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v3
+      with:
+        name: checksums
+        path: dist/checksums.txt
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+    
+    - name: Prepare release assets
+      run: |
+        mkdir -p release-assets
+        
+        # Copy executables from each platform
+        cp address-cleanser-ubuntu-latest/* release-assets/ 2>/dev/null || true
+        cp address-cleanser-windows-latest/* release-assets/ 2>/dev/null || true
+        cp address-cleanser-macos-latest/* release-assets/ 2>/dev/null || true
+        cp checksums/checksums.txt release-assets/ 2>/dev/null || true
+        
+        # Create archive with all executables
+        cd release-assets
+        tar -czf address-cleanser-all-platforms.tar.gz *
+        zip -r address-cleanser-all-platforms.zip *
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          release-assets/*
+        body: |
+          ## Address Cleanser ${{ github.ref_name }}
+          
+          ### Downloads
+          
+          **All Platforms Archive:**
+          - `address-cleanser-all-platforms.tar.gz` (Linux/macOS)
+          - `address-cleanser-all-platforms.zip` (Windows)
+          
+          **Individual Executables:**
+          - `address-cleanser-linux-*` - Linux executable
+          - `address-cleanser-windows-*.exe` - Windows executable  
+          - `address-cleanser-darwin-*` - macOS executable
+          
+          ### Installation
+          
+          1. Download the appropriate executable for your platform
+          2. Make it executable (Linux/macOS): `chmod +x address-cleanser-linux-*`
+          3. Run: `./address-cleanser-linux-* --help`
+          
+          ### Verification
+          
+          Verify file integrity using the provided checksums:
+          ```bash
+          sha256sum -c checksums.txt
+          ```
+          
+          ### Usage Examples
+          
+          ```bash
+          # Process a single address
+          ./address-cleanser-linux-* single --single "123 Main St, Austin, TX 78701"
+          
+          # Process a CSV file
+          ./address-cleanser-linux-* batch --input addresses.csv --output cleaned.csv
+          ```
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
