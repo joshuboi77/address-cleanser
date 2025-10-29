@@ -68,15 +68,18 @@ PKG_PATH="$OUTPUT_DIR/$PKG_NAME"
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
+# Create package structure
+mkdir -p "$TEMP_DIR/Scripts"
+mkdir -p "$TEMP_DIR/Resources"
+
 # Copy binary to Resources
-mkdir -p "$TEMP_DIR/Scripts/Resources"
-cp "$BINARY_PATH" "$TEMP_DIR/Scripts/Resources/address-cleanser"
+cp "$BINARY_PATH" "$TEMP_DIR/Resources/address-cleanser"
 
 # Copy postinstall script
 cp "$SCRIPT_DIR/pkg/Scripts/postinstall" "$TEMP_DIR/Scripts/postinstall"
 chmod 755 "$TEMP_DIR/Scripts/postinstall"
 
-# Create component package
+# Create component package (no root, just scripts)
 pkgbuild \
     --identifier "com.address-cleanser" \
     --version "$VERSION" \
@@ -88,7 +91,7 @@ pkgbuild \
 productbuild \
     --distribution "$SCRIPT_DIR/pkg/distribution-user.xml" \
     --package-path "$TEMP_DIR" \
-    --resources "$TEMP_DIR/Scripts/Resources" \
+    --resources "$TEMP_DIR/Resources" \
     --identifier "com.address-cleanser.dist" \
     --version "$VERSION" \
     "$PKG_PATH"
