@@ -83,6 +83,7 @@ async def batch_upload(
     Returns results in the specified format (json, csv, excel).
     """
     import io
+
     import pandas as pd
 
     service = get_address_service()
