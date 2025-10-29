@@ -38,15 +38,3 @@ def pytest_runtest_makereport(item, call):
                 rep.wasxfail = False
 
 
-@pytest.hookimpl()
-def pytest_unraisable_exception(unraisable):
-    """Handle unraisable ExceptionGroup exceptions from anyio background tasks."""
-    # On Python < 3.11, suppress unraisable ExceptionGroups from anyio
-    # These are known issues with TestClient's async handling
-    if sys.version_info < (3, 11):
-        exc = unraisable.exc_value
-        if exc and type(exc).__name__ == "ExceptionGroup":
-            exc_str = str(exc)
-            if "unhandled errors in a TaskGroup" in exc_str:
-                # Suppress this unraisable exception - it's a known TestClient issue
-                return
