@@ -142,6 +142,27 @@ class MacOSDistributor:
                 installed_binary = usr_local_bin / "address-cleanser"
                 shutil.copy2(binary_path, installed_binary)
                 
+                # Create distribution XML for better compatibility
+                distribution_xml = temp_path / "distribution.xml"
+                with open(distribution_xml, 'w') as f:
+                    f.write('''<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>Address Cleanser</title>
+    <organization>com.address-cleanser</organization>
+    <domains enable_localSystem="true"/>
+    <options customize="never" require-scripts="false"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.address-cleanser.cli"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.address-cleanser.cli" visible="false">
+        <pkg-ref id="com.address-cleanser.cli"/>
+    </choice>
+    <pkg-ref id="com.address-cleanser.cli" version="1.0.0" onConclusion="none">component.pkg</pkg-ref>
+</installer-gui-script>''')
+                
                 # Create component package
                 component_pkg = temp_path / "component.pkg"
                 subprocess.check_call([
@@ -156,7 +177,8 @@ class MacOSDistributor:
                 # Create distribution package
                 subprocess.check_call([
                     "productbuild",
-                    "--package", str(component_pkg),
+                    "--distribution", str(distribution_xml),
+                    "--package-path", str(temp_path),
                     str(pkg_path)
                 ])
                 
