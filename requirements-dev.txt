@@ -8,6 +8,7 @@
 pytest>=7.0.0,<8.4.0
 pytest-cov>=4.0.0,<6.0.0
 psutil>=6.1.1
+httpx>=0.24.0  # Required for FastAPI TestClient
 
 # Code quality
 black>=24.0.0

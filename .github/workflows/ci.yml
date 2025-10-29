@@ -33,21 +33,21 @@ jobs:
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 src/ cli.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 src/ cli.py api_server.py --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings
-        flake8 src/ cli.py --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+        flake8 src/ cli.py api_server.py --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
 
     - name: Check code formatting with black
       run: |
-        black --check src/ cli.py tests/
+        black --check src/ cli.py api_server.py tests/
 
     - name: Check import sorting with isort
       run: |
-        isort --check-only src/ cli.py tests/
+        isort --check-only src/ cli.py api_server.py tests/
 
     - name: Type check with mypy
       run: |
-        mypy src/ cli.py --ignore-missing-imports
+        mypy src/ cli.py api_server.py --ignore-missing-imports
       continue-on-error: true
 
     - name: Run tests with pytest
