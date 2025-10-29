@@ -50,4 +50,3 @@ def pytest_unraisable_exception(unraisable):
             if "unhandled errors in a TaskGroup" in exc_str:
                 # Suppress this unraisable exception - it's a known TestClient issue
                 return
-
