@@ -140,7 +140,6 @@ jobs:
           
           **macOS Distribution:**
           - `address-cleanser-macos-arm64.zip` - Signed & notarized ZIP
-          - `address-cleanser-user.pkg` - Per-user PKG installer (no admin required)
           - `address-cleanser.rb` - Homebrew formula
           - `install.sh` - One-line installer script
           - `checksums.txt` - File integrity verification
@@ -149,7 +148,6 @@ jobs:
           
           **macOS:**
           - **ZIP**: Download `address-cleanser-macos-arm64.zip`, extract, run
-          - **PKG**: Download `address-cleanser-user.pkg`, installs to ~/.local/bin
           - **Homebrew**: `brew tap joshuboi77/homebrew-address-cleanser && brew install address-cleanser`
           - **One-liner**: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/joshuboi77/address-cleanser/main/packaging/install.sh)"`
           
