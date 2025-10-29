@@ -41,19 +41,23 @@ def build_executable():
         "cli.py"
     ]
     
-    # Add icon based on platform
+    # Add icon based on platform (only if icon exists)
     system = platform.system().lower()
+    icon_path = None
     if system == "windows":
-        build_cmd.extend(["--icon", "assets/icon.ico"])
+        icon_path = "assets/icon.ico"
     elif system == "darwin":  # macOS
-        build_cmd.extend(["--icon", "assets/icon.icns"])
+        icon_path = "assets/icon.icns"
+    
+    if icon_path and Path(icon_path).exists():
+        build_cmd.extend(["--icon", icon_path])
     
     print(f"Building executable for {system}...")
     print(f"Command: {' '.join(build_cmd)}")
     
     try:
         subprocess.check_call(build_cmd)
-        print("✅ Build successful!")
+        print("Build successful!")
         
         # Move executable to dist folder with platform suffix
         exe_name = "address-cleanser"
@@ -67,12 +71,12 @@ def build_executable():
         
         if source.exists():
             source.rename(target)
-            print(f"✅ Executable created: {target}")
+            print(f"Executable created: {target}")
         else:
-            print(f"❌ Executable not found: {source}")
+            print(f"Executable not found: {source}")
             
     except subprocess.CalledProcessError as e:
-        print(f"❌ Build failed: {e}")
+        print(f"Build failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
