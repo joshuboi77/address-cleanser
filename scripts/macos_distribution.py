@@ -134,12 +134,13 @@ class MacOSDistributor:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_path = Path(temp_dir)
                 
-                # Create package structure
-                usr_local_bin = temp_path / "usr" / "local" / "bin"
-                usr_local_bin.mkdir(parents=True, exist_ok=True)
+                # Create package structure for user installation
+                # Install to Applications folder to avoid system volume issues
+                apps_dir = temp_path / "Applications" / "Address Cleanser"
+                apps_dir.mkdir(parents=True, exist_ok=True)
                 
                 # Copy binary and rename it
-                installed_binary = usr_local_bin / "address-cleanser"
+                installed_binary = apps_dir / "address-cleanser"
                 shutil.copy2(binary_path, installed_binary)
                 
                 # Create distribution XML for better compatibility
