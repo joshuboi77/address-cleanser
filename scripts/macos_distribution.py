@@ -111,8 +111,13 @@ class MacOSDistributor:
             print(f"❌ Stapling failed: {e}")
             return False
 
-    def create_zip_archive(self, binary_path: Path, output_dir: Path) -> Path:
-        """Create a ZIP archive for distribution."""
+    def create_zip_archive(self, binary_path: Path, output_dir: Path) -> Optional[Path]:
+        """Create a ZIP archive for distribution (only for universal binary)."""
+        # Only create ZIP for universal binary, skip architecture-specific ones
+        if "universal" not in binary_path.name:
+            print(f"Skipping ZIP creation for architecture-specific binary: {binary_path.name}")
+            return None
+            
         archive_name = f"{binary_path.stem}.zip"
         archive_path = output_dir / archive_name
         
@@ -307,21 +312,27 @@ echo "🚀 Run: address-cleanser --help"
         
         results = {}
         
+        # Only process universal binary to avoid redundant files
+        if "universal" not in binary_path.name:
+            print(f"Skipping distribution for architecture-specific binary: {binary_path.name}")
+            return results
+        
         # 1. Codesign the binary
         if self.codesign_binary(binary_path):
             results['codesigned'] = binary_path
         
-        # 2. Create ZIP archive
+        # 2. Create ZIP archive (only for universal)
         zip_path = self.create_zip_archive(binary_path, output_dir)
-        results['zip'] = zip_path
-        
-        # 3. Notarize ZIP
-        if self.notarize_archive(zip_path):
-            results['notarized'] = zip_path
+        if zip_path:
+            results['zip'] = zip_path
             
-            # 4. Staple ticket
-            if self.staple_ticket(zip_path):
-                results['stapled'] = zip_path
+            # 3. Notarize ZIP
+            if self.notarize_archive(zip_path):
+                results['notarized'] = zip_path
+                
+                # 4. Staple ticket
+                if self.staple_ticket(zip_path):
+                    results['stapled'] = zip_path
         
         # 5. Create PKG installer
         pkg_path = self.create_pkg_installer(binary_path, output_dir)
