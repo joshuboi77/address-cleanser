@@ -44,6 +44,7 @@ def build_executable():
         "--add-data", "out/sample_input.csv:out",
         "--add-data", "README.md:.",
         "--add-data", "LICENSE:.",
+        "--additional-hooks-dir", "hooks",
         "--hidden-import", "usaddress",
         "--hidden-import", "pandas",
         "--hidden-import", "openpyxl",
@@ -52,7 +53,7 @@ def build_executable():
         "--hidden-import", "psutil",
         "--hidden-import", "mmap",
         "--collect-all", "usaddress",
-        "--collect-submodules", "pandas.io.common",
+        "--collect-all", "pandas",
         "cli.py"
     ]
     
