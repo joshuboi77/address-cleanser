@@ -52,6 +52,7 @@ def build_executable():
         "--hidden-import", "psutil",
         "--hidden-import", "mmap",
         "--collect-all", "usaddress",
+        "--collect-submodules", "pandas.io.common",
         "cli.py"
     ]
     
