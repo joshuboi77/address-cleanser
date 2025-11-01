@@ -284,6 +284,11 @@ def _normalize_special_cases(normalized: Dict[str, str], parsed: Dict[str, str])
 
     if street_parts:
         normalized["street_name"] = " ".join(street_parts)
+        # Clear directional fields since they're now part of street_name
+        if "StreetNamePreDirectional" in parsed:
+            normalized.pop("street_directional_prefix", None)
+        if "StreetNamePostDirectional" in parsed:
+            normalized.pop("street_directional_suffix", None)
 
     # Handle ZIP+4 codes
     if "ZipCode" in parsed and "ZipPlus4" in parsed:
