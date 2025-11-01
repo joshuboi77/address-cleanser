@@ -104,6 +104,7 @@ address-cleanser batch --input addresses.csv --output cleaned_addresses.csv --fo
 - `--address-column, -c`: Name of the address column in CSV (auto-detected if not specified)
 - `--address-columns, -C`: Comma-separated list of columns to combine (e.g., `"Address,City,State,Zip"`)
 - `--preserve-columns, -p`: Preserve all original CSV columns in output
+- `--update-in-place`: Mirror input structure with cleaned values (perfect for client returns)
 - `--auto-combine, -a`: Auto-detect and combine separate address columns
 - `--report, -r`: Generate validation report file (optional)
 - `--chunk-size`: Process addresses in chunks of this size (default: 1000)
@@ -131,6 +132,9 @@ address-cleanser batch --input data.csv --output cleaned.csv --preserve-columns 
 
 # Preserve columns and output to Excel
 address-cleanser batch --input client_data.csv --output cleaned.xlsx --format excel --preserve-columns --auto-combine
+
+# Update in place - mirror client's structure with cleaned values (perfect for Fiverr/client returns)
+address-cleanser batch --input client_data.csv --output cleaned.csv --update-in-place
 ```
 
 #### Single Address Processing
@@ -185,6 +189,13 @@ address-cleanser single --single "PO Box 123, Austin, TX 78701" --output result.
 - Use `--preserve-columns` to keep all original CSV columns in the output
 - Original columns appear first, followed by `cleaned_*` columns with parsed/cleaned data
 - Perfect for maintaining client data structures while adding cleaned address fields
+
+**Update In-Place Mode:**
+- Use `--update-in-place` to mirror the client's exact input structure with cleaned values
+- Same columns, same order - only the address data is cleaned/standardized
+- Perfect for Fiverr clients or when returning data that needs to plug right back into their systems
+- No extra columns added - address fields are updated with cleaned values in place
+- Works with any column format: separate columns (Address, City, State, Zip) or combined (Full_Address)
 
 **Example CSV Formats:**
 
@@ -404,6 +415,28 @@ address-cleanser batch \
   --auto-combine
 ```
 
+**Example 5: Update in-place (perfect for client returns)**
+```bash
+# Mirror client's structure with cleaned values - no extra columns
+address-cleanser batch \
+  --input client_data.csv \
+  --output cleaned.csv \
+  --update-in-place
+```
+
+**Before (input with 7 columns):**
+```csv
+Name,Address,City,State,Zip,Phone,Email
+John Smith,123 main st apt#5a,Austin,TX,78701-123,555-0101,john@example.com
+```
+
+**After (output with same 7 columns):**
+```csv
+Name,Address,City,State,Zip,Phone,Email
+John Smith,123 MAIN ST, APT # 5A,AUSTIN,TX,78701-123,555-0101,john@example.com
+```
+Note: Address, City, and State are cleaned; non-address columns (Name, Phone, Email) are preserved unchanged
+
 ### Processing Different Address Types
 
 The tool handles various address formats:
@@ -611,6 +644,16 @@ The tool handles various error conditions gracefully:
 - Docker containerization
 
 ## Recent Updates
+
+### Version 1.0.16 Features
+
+- **Update In-Place Mode**: New `--update-in-place` flag for Fiverr/client work
+  - Mirrors client's exact input structure (same columns, same order)
+  - Only address fields are cleaned - no extra columns added
+  - Perfect for returning data that needs to plug right back into client systems
+  - Works with any column format: separate (Address, City, State, Zip) or combined (Full_Address)
+  - Automatically detects and intelligently maps column names (Street_Address, City_Name, etc.)
+  - Preserves all non-address columns unchanged
 
 ### Version 1.0.14 Features
 
