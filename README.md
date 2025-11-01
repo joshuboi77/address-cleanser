@@ -12,7 +12,7 @@ A Python CLI tool for parsing, validating, and formatting US addresses according
 - **Address Parsing**: Uses the `usaddress` library for NLP-based address parsing
 - **Offline Validation**: Validates ZIP codes, state abbreviations, and address completeness
 - **USPS Formatting**: Formats addresses according to USPS Publication 28 standards
-- **Multiple Output Formats**: Supports CSV, JSON, and Excel output formats
+- **Multiple Output Formats**: Supports CSV, JSON, and Excel output formats (input: CSV only)
 - **Batch Processing**: Process large CSV files with progress tracking
 - **Single Address Processing**: Process individual addresses from command line
 
@@ -27,12 +27,14 @@ Get up and running in 3 steps:
 
 2. **Test with sample data:**
    ```bash
-   python3 cli.py batch --input out/sample_input.csv --output test_results.csv --format csv
+   # If installed: address-cleanser batch --input out/sample_input.csv --output test_results.csv --format csv
+   # If from source: python3 cli.py batch --input out/sample_input.csv --output test_results.csv --format csv
    ```
 
 3. **Process a single address:**
    ```bash
-   python3 cli.py single --single "123 Main Street, Austin, TX 78701"
+   # If installed: address-cleanser single --single "123 Main Street, Austin, TX 78701"
+   # If from source: python3 cli.py single --single "123 Main Street, Austin, TX 78701"
    ```
 
 **Expected Output Preview:**
@@ -72,18 +74,29 @@ pip install usaddress pandas openpyxl click tqdm psutil
 
 ### Command Line Interface
 
-The tool provides two main commands: `batch` for processing CSV files and `single` for processing individual addresses.
+**Command Invocation:**
+- If installed as a package or via Homebrew: use `address-cleanser`
+- If running from source: use `python cli.py` or `python3 cli.py`
+
+**Command Structure:**
+```bash
+address-cleanser [OPTIONS] COMMAND [ARGS]...
+```
+
+The tool provides two main commands:
+- `batch` - Process addresses from a CSV file
+- `single` - Process a single address
 
 #### Batch Processing
 
-Process addresses from a CSV file:
+Process addresses from a CSV file (CSV input only; output can be CSV, JSON, or Excel):
 
 ```bash
-python cli.py batch --input addresses.csv --output cleaned_addresses.csv --format csv
+address-cleanser batch --input addresses.csv --output cleaned_addresses.csv --format csv
 ```
 
 **Options:**
-- `--input, -i`: Input CSV file path (required)
+- `--input, -i`: Input CSV file path (required) - **Note: Only CSV files are supported as input**
 - `--output, -o`: Output file path (required)
 - `--format, -f`: Output format - csv, json, or excel (default: csv)
 - `--address-column, -c`: Name of the address column in CSV (default: address)
@@ -94,13 +107,13 @@ python cli.py batch --input addresses.csv --output cleaned_addresses.csv --forma
 
 ```bash
 # Process CSV file and output to CSV
-python cli.py batch --input addresses.csv --output cleaned.csv --format csv
+address-cleanser batch --input addresses.csv --output cleaned.csv --format csv
 
 # Process CSV file and output to Excel with validation report
-python cli.py batch --input addresses.csv --output results.xlsx --format excel --report validation.txt
+address-cleanser batch --input addresses.csv --output results.xlsx --format excel --report validation.txt
 
 # Process with custom address column name
-python cli.py batch --input data.csv --output output.csv --address-column "full_address"
+address-cleanser batch --input data.csv --output output.csv --address-column "full_address"
 ```
 
 #### Single Address Processing
@@ -108,7 +121,7 @@ python cli.py batch --input data.csv --output output.csv --address-column "full_
 Process a single address:
 
 ```bash
-python cli.py single --single "123 Main Street, Austin, TX 78701" --format json
+address-cleanser single --single "123 Main Street, Austin, TX 78701" --format json
 ```
 
 **Options:**
@@ -120,13 +133,15 @@ python cli.py single --single "123 Main Street, Austin, TX 78701" --format json
 
 ```bash
 # Process single address and print to console
-python cli.py single --single "123 Main Street, Austin, TX 78701"
+address-cleanser single --single "123 Main Street, Austin, TX 78701"
 
 # Process single address and save to file
-python cli.py single --single "PO Box 123, Austin, TX 78701" --output result.json --format json
+address-cleanser single --single "PO Box 123, Austin, TX 78701" --output result.json --format json
 ```
 
 ### Input Format
+
+**Input Requirements:** The CLI accepts **CSV files only** as input. Excel files (.xlsx) are not supported for input, but you can output to Excel format. To process an Excel file, first export it to CSV format.
 
 The CSV input file should have a column containing addresses. By default, the tool looks for a column named "address", but you can specify a different column name using the `--address-column` option.
 
@@ -264,7 +279,7 @@ Review addresses with:
 
 ```bash
 # Process the included sample file
-python cli.py batch --input out/sample_input.csv --output results.csv --format csv --report report.txt
+address-cleanser batch --input out/sample_input.csv --output results.csv --format csv --report report.txt
 ```
 
 ### Processing Different Address Types
@@ -432,10 +447,10 @@ The tool supports configurable logging:
 
 ```bash
 # Set log level
-python cli.py --log-level DEBUG batch --input addresses.csv --output results.csv
+address-cleanser --log-level DEBUG batch --input addresses.csv --output results.csv
 
 # Log to file
-python cli.py --log-file logs/processing.log batch --input addresses.csv --output results.csv
+address-cleanser --log-file logs/processing.log batch --input addresses.csv --output results.csv
 ```
 
 ### Performance
@@ -443,7 +458,7 @@ python cli.py --log-file logs/processing.log batch --input addresses.csv --outpu
 For large files, the tool processes addresses in chunks to manage memory usage. The default chunk size is 1000 addresses, but you can adjust this:
 
 ```bash
-python cli.py batch --input large_file.csv --output results.csv --chunk-size 5000
+address-cleanser batch --input large_file.csv --output results.csv --chunk-size 5000
 ```
 
 ## Error Handling
