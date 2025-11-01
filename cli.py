@@ -8,7 +8,6 @@ in CSV, JSON, and Excel formats.
 import json
 import os
 import sys
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import click
@@ -60,7 +59,10 @@ def cli(ctx, log_level, log_file):
     help="Output format",
 )
 @click.option(
-    "--address-column", "-c", default=None, help="Name of the address column in input CSV (auto-detected if not specified)"
+    "--address-column",
+    "-c",
+    default=None,
+    help="Name of the address column in input CSV (auto-detected if not specified)",
 )
 @click.option(
     "--address-columns",
@@ -84,7 +86,18 @@ def cli(ctx, log_level, log_file):
 @click.option("--report", "-r", help="Validation report file path (optional)")
 @click.option("--chunk-size", default=1000, help="Process addresses in chunks of this size")
 @click.pass_context
-def batch(ctx, input, output, format, address_column, address_columns, preserve_columns, auto_combine, report, chunk_size):
+def batch(
+    ctx,
+    input,
+    output,
+    format,
+    address_column,
+    address_columns,
+    preserve_columns,
+    auto_combine,
+    report,
+    chunk_size,
+):
     """Process addresses from a CSV file in batch."""
     logger = ctx.obj["logger"]
 
@@ -249,15 +262,14 @@ def process_csv_file(
                         f"Using case-insensitive match: '{actual_address_column}' for 'address'"
                     )
                 else:
-                    logger.error(
-                        f"No address column found. Available columns: {list(df.columns)}"
-                    )
+                    logger.error(f"No address column found. Available columns: {list(df.columns)}")
                     raise ValueError("No address column found. Use --address-column to specify.")
 
     # Check if address column exists
     if actual_address_column not in df.columns:
         logger.error(
-            f"Address column '{actual_address_column}' not found in CSV. Available columns: {list(df.columns)}"
+            f"Address column '{actual_address_column}' not found in CSV. "
+            f"Available columns: {list(df.columns)}"
         )
         raise ValueError(f"Address column '{actual_address_column}' not found")
 
@@ -394,7 +406,9 @@ def write_csv_output(
 
     # Merge with original DataFrame if provided
     if original_df is not None and len(original_df) == len(parsed_df):
-        output_df = pd.concat([original_df.reset_index(drop=True), parsed_df.reset_index(drop=True)], axis=1)
+        output_df = pd.concat(
+            [original_df.reset_index(drop=True), parsed_df.reset_index(drop=True)], axis=1
+        )
         logger.info(f"Preserved {len(original_df.columns)} original columns in output")
     else:
         # Use cleaned_ prefix removal for backward compatibility when not preserving

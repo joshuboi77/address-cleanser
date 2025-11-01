@@ -378,7 +378,8 @@ def validate_city(city: str) -> Tuple[bool, str]:
     if not re.match(r"^[A-Za-z\s\-']+$", city_clean):
         return (
             False,
-            f"City name contains invalid characters: {city}. Only letters, spaces, hyphens, and apostrophes allowed",
+            f"City name contains invalid characters: {city}. "
+            "Only letters, spaces, hyphens, and apostrophes allowed",
         )
 
     return True, ""
