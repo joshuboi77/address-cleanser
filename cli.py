@@ -468,38 +468,38 @@ def write_output(
 def _create_column_mapping(original_columns: List[str], parsed_df: pd.DataFrame) -> Dict[str, str]:
     """
     Create a mapping from original column names to cleaned column names.
-    
+
     Maps columns like 'Street' -> 'cleaned_street_name', 'City' -> 'cleaned_city', etc.
     Intelligently detects column purposes based on common naming patterns.
-    
+
     Args:
         original_columns: List of original column names from input
         parsed_df: DataFrame with cleaned_* columns
-        
+
     Returns:
         Dictionary mapping original column name to cleaned column name
     """
     mapping = {}
-    
+
     # Available cleaned columns
     available_cleaned = set(parsed_df.columns)
-    
+
     # Check if we have separate address component columns
     has_separate_components = (
-        any("city" in col.lower() for col in original_columns) or
-        any("state" in col.lower() and "estate" not in col.lower() for col in original_columns) or
-        any(word in col.lower() for col in original_columns for word in ["zip", "postal"])
+        any("city" in col.lower() for col in original_columns)
+        or any("state" in col.lower() and "estate" not in col.lower() for col in original_columns)
+        or any(word in col.lower() for col in original_columns for word in ["zip", "postal"])
     )
-    
+
     for col in original_columns:
         col_lower = col.lower()
-        
+
         # Full address column (contains full address string)
         if any(word in col_lower for word in ["full_address", "fulladdress", "complete_address"]):
             if "cleaned_formatted_address" in available_cleaned:
                 mapping[col] = "cleaned_formatted_address"
                 continue
-        
+
         # Generic address column (typically street address)
         if col_lower in ["address", "addr", "street_address", "streetaddress", "mailing_address"]:
             # If separate components exist, use street-only address
@@ -508,46 +508,49 @@ def _create_column_mapping(original_columns: List[str], parsed_df: pd.DataFrame)
             elif "cleaned_formatted_address" in available_cleaned:
                 mapping[col] = "cleaned_formatted_address"
             continue
-        
+
         # City column
         if "city" in col_lower:
             if "cleaned_city" in available_cleaned:
                 mapping[col] = "cleaned_city"
             continue
-        
+
         # State column
         if "state" in col_lower and "estate" not in col_lower:
             if "cleaned_state" in available_cleaned:
                 mapping[col] = "cleaned_state"
             continue
-        
+
         # ZIP/Postal code column
         if any(word in col_lower for word in ["zip", "postal", "postcode", "zipcode"]):
             if "cleaned_zip_code" in available_cleaned:
                 mapping[col] = "cleaned_zip_code"
             continue
-        
+
         # Street/Street Address column
-        if any(word in col_lower for word in ["street", "street_address"]) and "city" not in col_lower:
+        if (
+            any(word in col_lower for word in ["street", "street_address"])
+            and "city" not in col_lower
+        ):
             # Combine street components into formatted street
             if "cleaned_street_number" in available_cleaned:
                 # We'll need to create a combined street field
                 # For now, use formatted address
                 mapping[col] = "cleaned_formatted_address"
             continue
-        
+
         # PO Box column
         if any(word in col_lower for word in ["po_box", "pobox", "p.o.box", "p.o. box"]):
             if "cleaned_po_box" in available_cleaned:
                 mapping[col] = "cleaned_po_box"
             continue
-        
+
         # Unit/Apt/Suite column
         if any(word in col_lower for word in ["unit", "apt", "apartment", "suite", "ste"]):
             if "cleaned_unit" in available_cleaned:
                 mapping[col] = "cleaned_unit"
             continue
-    
+
     return mapping
 
 
@@ -632,12 +635,16 @@ def write_csv_output(
     if update_in_place and original_df is not None and len(original_df) == len(parsed_df):
         logger.info("Update-in-place mode: mirroring input structure with cleaned values")
         output_df = original_df.copy()
-        
+
         # Check if we have separate City/State/Zip columns
         has_city_col = any("city" in col.lower() for col in original_df.columns)
-        has_state_col = any("state" in col.lower() and "estate" not in col.lower() for col in original_df.columns)
-        has_zip_col = any(word in col.lower() for col in original_df.columns for word in ["zip", "postal"])
-        
+        has_state_col = any(
+            "state" in col.lower() and "estate" not in col.lower() for col in original_df.columns
+        )
+        has_zip_col = any(
+            word in col.lower() for col in original_df.columns for word in ["zip", "postal"]
+        )
+
         # Create combined street address if needed (for separate column formats)
         if has_city_col or has_state_col or has_zip_col:
             street_parts = []
@@ -661,32 +668,32 @@ def write_csv_output(
                     if parsed_df["cleaned_street_type"].iloc[idx]:
                         street_components.append(str(parsed_df["cleaned_street_type"].iloc[idx]))
                     street_addr = " ".join(street_components)
-                
+
                 # Add unit/apt if present (comma-separated)
                 unit = parsed_df["cleaned_unit"].iloc[idx]
                 if unit and street_addr:
                     street_addr = f"{street_addr}, {unit}"
                 elif unit:
                     street_addr = str(unit)
-                
+
                 street_parts.append(street_addr if street_addr else "")
             parsed_df["cleaned_street_address_only"] = street_parts
             logger.debug("Created cleaned_street_address_only column for separate components")
-        
+
         # Map cleaned components to original columns
         column_mapping = _create_column_mapping(original_df.columns, parsed_df)
-        
+
         # Update each mapped column with cleaned data
         for orig_col, cleaned_col in column_mapping.items():
             if cleaned_col in parsed_df.columns:
                 output_df[orig_col] = parsed_df[cleaned_col]
                 logger.debug(f"Mapped '{orig_col}' <- '{cleaned_col}'")
-        
+
         logger.info(
             f"Updated {len(column_mapping)} columns in-place; "
             f"output has {len(output_df.columns)} columns (same as input)"
         )
-    
+
     # Merge with original DataFrame if provided (standard preserve mode)
     elif original_df is not None and len(original_df) == len(parsed_df):
         output_df = pd.concat(
