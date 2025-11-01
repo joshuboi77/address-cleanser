@@ -8,7 +8,7 @@ This package provides functionality to:
 - Export results in CSV, JSON, and Excel formats
 """
 
-__version__ = "1.0.12"
+__version__ = "1.0.13"
 __author__ = "Address Cleanser Team"
 __license__ = "MIT"
 __description__ = "A CLI tool for parsing, validating, and formatting US addresses"

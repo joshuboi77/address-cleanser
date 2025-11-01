@@ -612,7 +612,7 @@ The tool handles various error conditions gracefully:
 
 ## Recent Updates
 
-### Version 1.0.12 Features
+### Version 1.0.13 Features
 
 - **Column Preservation**: Preserve original CSV columns with `--preserve-columns` flag
 - **Auto-Detection**: Automatically detect and combine separate address columns with `--auto-combine`

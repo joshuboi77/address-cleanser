@@ -30,7 +30,7 @@ app = FastAPI(
         "REST API for parsing, validating, and formatting US addresses "
         "according to USPS Publication 28 standards"
     ),
-    version="1.0.12",
+    version="1.0.13",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -60,7 +60,7 @@ async def root():
     """Root endpoint with API information."""
     return {
         "name": "Address Cleanser API",
-        "version": "1.0.12",
+        "version": "1.0.13",
         "docs": "/docs",
         "health": "/api/v1/health",
         "authentication": (
