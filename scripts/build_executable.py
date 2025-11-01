@@ -50,6 +50,8 @@ def build_executable():
         "--hidden-import", "click",
         "--hidden-import", "tqdm",
         "--hidden-import", "psutil",
+        "--hidden-import", "mmap",
+        "--collect-all", "usaddress",
         "cli.py"
     ]
     
