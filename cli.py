@@ -86,6 +86,37 @@ def cli(ctx, log_level, log_file):
 )
 @click.option("--report", "-r", help="Validation report file path (optional)")
 @click.option("--chunk-size", default=1000, help="Process addresses in chunks of this size")
+# CSV formatting options
+@click.option("--csv-delimiter", default=",", help="CSV delimiter character (default ',')")
+@click.option(
+    "--csv-encoding",
+    default="utf-8",
+    help="File encoding for CSV/JSON/Excel (default 'utf-8'; use 'utf-8-sig' for Excel on Windows)",
+)
+@click.option(
+    "--csv-quote",
+    type=click.Choice(["minimal", "all", "nonnumeric", "none"]),
+    default="minimal",
+    help="CSV quoting strategy (default 'minimal')",
+)
+@click.option(
+    "--csv-newline",
+    type=click.Choice(["system", "lf", "crlf"]),
+    default="system",
+    help="Line endings for CSV output (default 'system')",
+)
+@click.option(
+    "--excel-friendly",
+    is_flag=True,
+    default=False,
+    help="Shorthand: encoding utf-8-sig + CRLF + quote all for best Excel compatibility",
+)
+@click.option(
+    "--prune-empty-cleaned",
+    is_flag=True,
+    default=False,
+    help="Remove cleaned_* columns that are completely empty (off by default)",
+)
 @click.pass_context
 def batch(
     ctx,
@@ -98,6 +129,12 @@ def batch(
     auto_combine,
     report,
     chunk_size,
+    csv_delimiter,
+    csv_encoding,
+    csv_quote,
+    csv_newline,
+    excel_friendly,
+    prune_empty_cleaned,
 ):
     """Process addresses from a CSV file in batch."""
     logger = ctx.obj["logger"]
@@ -123,8 +160,23 @@ def batch(
             logger,
         )
 
-        # Write output
-        write_output(results, output, format, logger, original_df if preserve_columns else None)
+        # Write output with CSV options
+        csv_options = {
+            "delimiter": csv_delimiter,
+            "encoding": csv_encoding,
+            "quote": csv_quote,
+            "newline": csv_newline,
+            "excel_friendly": excel_friendly,
+            "prune_empty_cleaned": prune_empty_cleaned,
+        }
+        write_output(
+            results,
+            output,
+            format,
+            logger,
+            original_df if preserve_columns else None,
+            csv_options=csv_options,
+        )
 
         # Write report if requested
         if report:
@@ -274,25 +326,41 @@ def process_csv_file(
         )
         raise ValueError(f"Address column '{actual_address_column}' not found")
 
-    # Get addresses
-    addresses = df[actual_address_column].dropna().tolist()
-    logger.info(f"Found {len(addresses)} addresses to process")
+    # Get addresses (preserve alignment)
+    addresses_series = df[actual_address_column]
+    total_rows = len(addresses_series)
+    logger.info(f"Found {total_rows} rows; processing address column with alignment preserved")
 
-    # Process addresses in chunks
     results = []
-    for i in tqdm(range(0, len(addresses), chunk_size), desc="Processing addresses"):
-        chunk = addresses[i : i + chunk_size]
-        chunk_results = []
 
-        for address in chunk:
+    def _empty_result(orig: Any, issue: str) -> Dict[str, Any]:
+        return {
+            "original": "" if (orig is None or (isinstance(orig, float) and pd.isna(orig))) else str(orig),
+            "parsed": {},
+            "formatted": {},
+            "single_line": "",
+            "multi_line": [],
+            "confidence": 0.0,
+            "valid": False,
+            "issues": [issue],
+            "address_type": "Empty",
+        }
+
+    # Iterate in chunks but over the full aligned series
+    for start in tqdm(range(0, total_rows, chunk_size), desc="Processing addresses"):
+        end = min(start + chunk_size, total_rows)
+        chunk_results = []
+        for addr in addresses_series.iloc[start:end]:
+            if pd.isna(addr) or (isinstance(addr, str) and addr.strip() == ""):
+                chunk_results.append(_empty_result(addr, "Missing address"))
+                continue
             try:
-                result = process_single_address(address, logger)
-                chunk_results.append(result)
+                chunk_results.append(process_single_address(str(addr), logger))
             except Exception as e:
-                logger.warning(f"Error processing address '{address}': {str(e)}")
+                logger.warning(f"Error processing address '{addr}': {str(e)}")
                 chunk_results.append(
                     {
-                        "original": address,
+                        "original": str(addr),
                         "parsed": {},
                         "formatted": {},
                         "single_line": "",
@@ -303,7 +371,6 @@ def process_csv_file(
                         "address_type": "Error",
                     }
                 )
-
         results.extend(chunk_results)
 
     # Return original DataFrame if preserving columns
@@ -350,6 +417,7 @@ def write_output(
     format: str,
     logger,
     original_df: Optional[pd.DataFrame] = None,
+    csv_options: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
     Write results to output file in specified format.
@@ -366,11 +434,11 @@ def write_output(
         ensure_directory_exists(output_dir)
 
     if format == "csv":
-        write_csv_output(results, output_path, logger, original_df)
+        write_csv_output(results, output_path, logger, original_df, csv_options or {})
     elif format == "json":
-        write_json_output(results, output_path, logger, original_df)
+        write_json_output(results, output_path, logger, original_df, encoding=(csv_options or {}).get("encoding", "utf-8"))
     elif format == "excel":
-        write_excel_output(results, output_path, logger, original_df)
+        write_excel_output(results, output_path, logger, original_df, encoding=(csv_options or {}).get("encoding", "utf-8"))
 
 
 def write_csv_output(
@@ -378,9 +446,48 @@ def write_csv_output(
     output_path: str,
     logger,
     original_df: Optional[pd.DataFrame] = None,
+    csv_options: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Write results to CSV file, optionally preserving original columns."""
-    logger.info(f"Writing CSV output to: {output_path}")
+    import os
+    csv_options = csv_options or {}
+    delimiter = csv_options.get("delimiter", ",")
+    encoding = csv_options.get("encoding", "utf-8")
+    quote_mode = csv_options.get("quote", "minimal")
+    newline_opt = csv_options.get("newline", "system")
+    excel_friendly = bool(csv_options.get("excel_friendly", False))
+    prune_empty_cleaned = bool(csv_options.get("prune_empty_cleaned", False))
+
+    # Excel-friendly preset overrides
+    if excel_friendly:
+        encoding = "utf-8-sig"
+        newline_opt = "crlf"
+        quote_mode = "all"
+
+    # Map quote option to csv constants
+    if quote_mode == "all":
+        quoting_mode = csv.QUOTE_ALL
+    elif quote_mode == "nonnumeric":
+        quoting_mode = csv.QUOTE_NONNUMERIC
+    elif quote_mode == "none":
+        quoting_mode = csv.QUOTE_NONE
+    else:
+        quoting_mode = csv.QUOTE_MINIMAL
+
+    # Determine line terminator
+    if newline_opt == "lf":
+        line_ending = "\n"
+    elif newline_opt == "crlf":
+        line_ending = "\r\n"
+    else:
+        line_ending = os.linesep
+
+    # QUOTE_NONE requires an escapechar
+    extra_to_csv = {}
+    if quoting_mode == csv.QUOTE_NONE:
+        extra_to_csv["escapechar"] = "\\"
+
+    logger.info(f"Writing CSV output to: {output_path} (delimiter='{delimiter}', encoding='{encoding}', quoting='{quote_mode}', newline='{newline_opt}')")
 
     # Prepare parsed address data
     parsed_data = []
@@ -416,15 +523,33 @@ def write_csv_output(
         output_df = parsed_df.copy()
         output_df.columns = [col.replace("cleaned_", "") for col in output_df.columns]
 
-    # Write to CSV with clean formatting
+    if original_df is not None and prune_empty_cleaned:
+        cleaned_cols = [col for col in output_df.columns if col.startswith("cleaned_")]
+        non_empty_cleaned = []
+        for col in cleaned_cols:
+            if output_df[col].notna().any() and (output_df[col] != "").any():
+                non_empty_cleaned.append(col)
+        cols_to_keep = list(original_df.columns) + non_empty_cleaned
+        for col in output_df.columns:
+            if not col.startswith("cleaned_") and col not in cols_to_keep:
+                cols_to_keep.append(col)
+        output_df = output_df[cols_to_keep]
+        if len(cleaned_cols) != len(non_empty_cleaned):
+            logger.info(
+                f"Removed {len(cleaned_cols) - len(non_empty_cleaned)} empty cleaned columns for cleaner output"
+            )
+
+    # Write to CSV with standard formatting
     # Replace NaN/None with empty string
     output_df = output_df.fillna("")
-    # Use QUOTE_ALL - quote all fields for cleaner, more readable CSV output
-    # This makes it easier to see field boundaries, especially with empty fields
     output_df.to_csv(
         output_path,
         index=False,
-        quoting=csv.QUOTE_ALL,
+        sep=delimiter,
+        quoting=quoting_mode,
+        lineterminator=line_ending,
+        encoding=encoding,
+        **extra_to_csv,
     )
 
 
@@ -433,6 +558,7 @@ def write_json_output(
     output_path: str,
     logger,
     original_df: Optional[pd.DataFrame] = None,
+    encoding: str = "utf-8",
 ) -> None:
     """Write results to JSON file, optionally including original data."""
     logger.info(f"Writing JSON output to: {output_path}")
@@ -448,7 +574,7 @@ def write_json_output(
         output_data["original_data"] = original_df.to_dict("records")
         logger.info(f"Included {len(original_df.columns)} original columns in JSON output")
 
-    with open(output_path, "w", encoding="utf-8") as f:
+    with open(output_path, "w", encoding=encoding) as f:
         json.dump(output_data, f, indent=2, ensure_ascii=False)
 
 
@@ -457,6 +583,7 @@ def write_excel_output(
     output_path: str,
     logger,
     original_df: Optional[pd.DataFrame] = None,
+    encoding: str = "utf-8",
 ) -> None:
     """Write results to Excel file, optionally preserving original columns."""
     logger.info(f"Writing Excel output to: {output_path}")

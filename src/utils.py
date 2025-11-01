@@ -225,7 +225,15 @@ def combine_address_columns(df, address_columns: List[str]) -> "pd.Series":
 
     for col in address_columns:
         col_lower = col.lower()
-        if any(
+        # Check more specific patterns first to avoid false matches
+        # (e.g., "state" should not match "st" in street keywords)
+        if "city" in col_lower:
+            city_cols.append(col)
+        elif "state" in col_lower:
+            state_cols.append(col)
+        elif any(word in col_lower for word in ["zip", "postal", "zipcode", "postcode"]):
+            zip_cols.append(col)
+        elif any(
             word in col_lower
             for word in [
                 "street",
@@ -245,12 +253,6 @@ def combine_address_columns(df, address_columns: List[str]) -> "pd.Series":
             ]
         ):
             street_cols.append(col)
-        elif "city" in col_lower:
-            city_cols.append(col)
-        elif "state" in col_lower:
-            state_cols.append(col)
-        elif any(word in col_lower for word in ["zip", "postal", "zipcode", "postcode"]):
-            zip_cols.append(col)
         else:
             other_cols.append(col)
 
