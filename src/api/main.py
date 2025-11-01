@@ -13,7 +13,7 @@ from .endpoints import router
 app = FastAPI(
     title="Address Cleanser API",
     description="REST API for parsing, validating, and formatting US addresses",
-    version="1.0.13",
+    version="1.0.14",
     docs_url="/docs",
     redoc_url="/redoc",
 )

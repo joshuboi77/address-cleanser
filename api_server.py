@@ -30,7 +30,7 @@ app = FastAPI(
         "REST API for parsing, validating, and formatting US addresses "
         "according to USPS Publication 28 standards"
     ),
-    version="1.0.13",
+    version="1.0.14",
     docs_url="/docs",
     redoc_url="/redoc",
 )

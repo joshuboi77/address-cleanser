@@ -612,6 +612,13 @@ The tool handles various error conditions gracefully:
 
 ## Recent Updates
 
+### Version 1.0.14 Features
+
+- **Fixed PyInstaller Executable Issues**: 
+  - Fixed `ModuleNotFoundError: No module named 'mmap'` that caused crashes when writing CSV output
+  - Fixed address parsing failures by including usaddress model files in executable bundles
+  - Executables now work correctly with all features
+
 ### Version 1.0.13 Features
 
 - **Column Preservation**: Preserve original CSV columns with `--preserve-columns` flag
