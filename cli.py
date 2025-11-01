@@ -19,6 +19,8 @@ from src.formatter import create_formatted_address_result
 from src.parser import handle_edge_cases, parse_address
 from src.utils import (
     calculate_processing_stats,
+    combine_address_columns,
+    detect_address_columns,
     ensure_directory_exists,
     setup_logging,
     validate_file_extension,
@@ -58,12 +60,31 @@ def cli(ctx, log_level, log_file):
     help="Output format",
 )
 @click.option(
-    "--address-column", "-c", default="address", help="Name of the address column in input CSV"
+    "--address-column", "-c", default=None, help="Name of the address column in input CSV (auto-detected if not specified)"
+)
+@click.option(
+    "--address-columns",
+    "-C",
+    help="Comma-separated list of address columns to combine (e.g., 'Address,City,State,Zip')",
+)
+@click.option(
+    "--preserve-columns",
+    "-p",
+    is_flag=True,
+    default=False,
+    help="Preserve all original CSV columns in output",
+)
+@click.option(
+    "--auto-combine",
+    "-a",
+    is_flag=True,
+    default=False,
+    help="Auto-detect and combine separate address columns",
 )
 @click.option("--report", "-r", help="Validation report file path (optional)")
 @click.option("--chunk-size", default=1000, help="Process addresses in chunks of this size")
 @click.pass_context
-def batch(ctx, input, output, format, address_column, report, chunk_size):
+def batch(ctx, input, output, format, address_column, address_columns, preserve_columns, auto_combine, report, chunk_size):
     """Process addresses from a CSV file in batch."""
     logger = ctx.obj["logger"]
 
@@ -78,10 +99,18 @@ def batch(ctx, input, output, format, address_column, report, chunk_size):
             sys.exit(1)
 
         # Process the file
-        results = process_csv_file(input, address_column, chunk_size, logger)
+        results, original_df = process_csv_file(
+            input,
+            address_column,
+            address_columns,
+            preserve_columns,
+            auto_combine,
+            chunk_size,
+            logger,
+        )
 
         # Write output
-        write_output(results, output, format, logger)
+        write_output(results, output, format, logger, original_df if preserve_columns else None)
 
         # Write report if requested
         if report:
@@ -142,18 +171,27 @@ def single(ctx, single, format, output):
 
 
 def process_csv_file(
-    input_file: str, address_column: str, chunk_size: int, logger
-) -> List[Dict[str, Any]]:
+    input_file: str,
+    address_column: Optional[str],
+    address_columns: Optional[str],
+    preserve_columns: bool,
+    auto_combine: bool,
+    chunk_size: int,
+    logger,
+) -> tuple[List[Dict[str, Any]], Optional[pd.DataFrame]]:
     """
-    Process addresses from a CSV file.
+    Process addresses from a CSV file with enhanced column preservation.
 
     Args:
         input_file: Path to input CSV file
-        address_column: Name of the address column
+        address_column: Name of the address column (None for auto-detect)
+        address_columns: Comma-separated list of columns to combine
+        preserve_columns: Whether to preserve original columns
+        auto_combine: Auto-detect and combine separate address columns
         chunk_size: Number of addresses to process at once
 
     Returns:
-        List of processing results
+        Tuple of (list of processing results, original DataFrame if preserving columns)
     """
     logger.info(f"Reading CSV file: {input_file}")
 
@@ -164,15 +202,67 @@ def process_csv_file(
         logger.error(f"Error reading CSV file: {str(e)}")
         raise
 
+    # Determine address column(s)
+    actual_address_column = None
+    combined_address_series = None
+
+    # If explicit columns provided, combine them
+    if address_columns:
+        columns_to_combine = [col.strip() for col in address_columns.split(",")]
+        missing_cols = [col for col in columns_to_combine if col not in df.columns]
+        if missing_cols:
+            logger.error(
+                f"Address columns not found: {missing_cols}. Available columns: {list(df.columns)}"
+            )
+            raise ValueError(f"Address columns not found: {missing_cols}")
+        logger.info(f"Combining address columns: {columns_to_combine}")
+        combined_address_series = combine_address_columns(df, columns_to_combine)
+        actual_address_column = "_combined_address"
+        df[actual_address_column] = combined_address_series
+
+    # Auto-detect and combine if enabled
+    elif auto_combine and not address_column:
+        detected_cols = detect_address_columns(df)
+        if detected_cols and len(detected_cols) > 1:
+            logger.info(f"Auto-detected address columns: {detected_cols}")
+            combined_address_series = combine_address_columns(df, detected_cols)
+            actual_address_column = "_combined_address"
+            df[actual_address_column] = combined_address_series
+        elif detected_cols and len(detected_cols) == 1:
+            actual_address_column = detected_cols[0]
+            logger.info(f"Auto-detected single address column: {actual_address_column}")
+
+    # Use specified column or default
+    if not actual_address_column:
+        if address_column:
+            actual_address_column = address_column
+        else:
+            # Try default "address" column
+            if "address" in df.columns:
+                actual_address_column = "address"
+            else:
+                # Try case-insensitive match
+                columns_lower = [col.lower() for col in df.columns]
+                if "address" in columns_lower:
+                    actual_address_column = df.columns[columns_lower.index("address")]
+                    logger.info(
+                        f"Using case-insensitive match: '{actual_address_column}' for 'address'"
+                    )
+                else:
+                    logger.error(
+                        f"No address column found. Available columns: {list(df.columns)}"
+                    )
+                    raise ValueError("No address column found. Use --address-column to specify.")
+
     # Check if address column exists
-    if address_column not in df.columns:
+    if actual_address_column not in df.columns:
         logger.error(
-            f"Address column '{address_column}' not found in CSV. Available columns: {list(df.columns)}"
+            f"Address column '{actual_address_column}' not found in CSV. Available columns: {list(df.columns)}"
         )
-        raise ValueError(f"Address column '{address_column}' not found")
+        raise ValueError(f"Address column '{actual_address_column}' not found")
 
     # Get addresses
-    addresses = df[address_column].dropna().tolist()
+    addresses = df[actual_address_column].dropna().tolist()
     logger.info(f"Found {len(addresses)} addresses to process")
 
     # Process addresses in chunks
@@ -203,7 +293,13 @@ def process_csv_file(
 
         results.extend(chunk_results)
 
-    return results
+    # Return original DataFrame if preserving columns
+    original_df = df.copy() if preserve_columns else None
+    # Remove temporary combined column from original if it exists
+    if original_df is not None and "_combined_address" in original_df.columns:
+        original_df = original_df.drop(columns=["_combined_address"])
+
+    return results, original_df
 
 
 def process_single_address(address: str, logger) -> Dict[str, Any]:
@@ -235,7 +331,13 @@ def process_single_address(address: str, logger) -> Dict[str, Any]:
     return formatted_result
 
 
-def write_output(results: List[Dict[str, Any]], output_path: str, format: str, logger) -> None:
+def write_output(
+    results: List[Dict[str, Any]],
+    output_path: str,
+    format: str,
+    logger,
+    original_df: Optional[pd.DataFrame] = None,
+) -> None:
     """
     Write results to output file in specified format.
 
@@ -244,51 +346,72 @@ def write_output(results: List[Dict[str, Any]], output_path: str, format: str, l
         output_path: Path to output file
         format: Output format (csv, json, excel)
         logger: Logger instance
+        original_df: Original DataFrame to preserve columns from (optional)
     """
     output_dir = os.path.dirname(output_path)
     if output_dir:  # Only create if there's a directory component
         ensure_directory_exists(output_dir)
 
     if format == "csv":
-        write_csv_output(results, output_path, logger)
+        write_csv_output(results, output_path, logger, original_df)
     elif format == "json":
-        write_json_output(results, output_path, logger)
+        write_json_output(results, output_path, logger, original_df)
     elif format == "excel":
-        write_excel_output(results, output_path, logger)
+        write_excel_output(results, output_path, logger, original_df)
 
 
-def write_csv_output(results: List[Dict[str, Any]], output_path: str, logger) -> None:
-    """Write results to CSV file."""
+def write_csv_output(
+    results: List[Dict[str, Any]],
+    output_path: str,
+    logger,
+    original_df: Optional[pd.DataFrame] = None,
+) -> None:
+    """Write results to CSV file, optionally preserving original columns."""
     logger.info(f"Writing CSV output to: {output_path}")
 
-    # Prepare data for CSV
-    csv_data = []
+    # Prepare parsed address data
+    parsed_data = []
     for result in results:
         row = {
-            "original_address": result["original"],
-            "street_number": result["parsed"].get("street_number", ""),
-            "street_name": result["parsed"].get("street_name", ""),
-            "street_type": result["parsed"].get("street_type", ""),
-            "city": result["parsed"].get("city", ""),
-            "state": result["parsed"].get("state", ""),
-            "zip_code": result["parsed"].get("zip_code", ""),
-            "unit": result["parsed"].get("unit", ""),
-            "po_box": result["parsed"].get("po_box", ""),
-            "formatted_address": result["single_line"],
-            "confidence_score": result["confidence"],
-            "validation_status": "Valid" if result["valid"] else "Invalid",
-            "issues": "; ".join(result["issues"]) if result["issues"] else "",
-            "address_type": result["address_type"],
+            "cleaned_original_address": result["original"],
+            "cleaned_street_number": result["parsed"].get("street_number", ""),
+            "cleaned_street_name": result["parsed"].get("street_name", ""),
+            "cleaned_street_type": result["parsed"].get("street_type", ""),
+            "cleaned_city": result["parsed"].get("city", ""),
+            "cleaned_state": result["parsed"].get("state", ""),
+            "cleaned_zip_code": result["parsed"].get("zip_code", ""),
+            "cleaned_unit": result["parsed"].get("unit", ""),
+            "cleaned_po_box": result["parsed"].get("po_box", ""),
+            "cleaned_formatted_address": result["single_line"],
+            "cleaned_confidence_score": result["confidence"],
+            "cleaned_validation_status": "Valid" if result["valid"] else "Invalid",
+            "cleaned_issues": "; ".join(result["issues"]) if result["issues"] else "",
+            "cleaned_address_type": result["address_type"],
         }
-        csv_data.append(row)
+        parsed_data.append(row)
+
+    parsed_df = pd.DataFrame(parsed_data)
+
+    # Merge with original DataFrame if provided
+    if original_df is not None and len(original_df) == len(parsed_df):
+        output_df = pd.concat([original_df.reset_index(drop=True), parsed_df.reset_index(drop=True)], axis=1)
+        logger.info(f"Preserved {len(original_df.columns)} original columns in output")
+    else:
+        # Use cleaned_ prefix removal for backward compatibility when not preserving
+        output_df = parsed_df.copy()
+        output_df.columns = [col.replace("cleaned_", "") for col in output_df.columns]
 
     # Write to CSV
-    df = pd.DataFrame(csv_data)
-    df.to_csv(output_path, index=False)
+    output_df.to_csv(output_path, index=False)
 
 
-def write_json_output(results: List[Dict[str, Any]], output_path: str, logger) -> None:
-    """Write results to JSON file."""
+def write_json_output(
+    results: List[Dict[str, Any]],
+    output_path: str,
+    logger,
+    original_df: Optional[pd.DataFrame] = None,
+) -> None:
+    """Write results to JSON file, optionally including original data."""
     logger.info(f"Writing JSON output to: {output_path}")
 
     output_data = {
@@ -297,40 +420,63 @@ def write_json_output(results: List[Dict[str, Any]], output_path: str, logger) -
         "timestamp": pd.Timestamp.now().isoformat(),
     }
 
+    # Include original data if preserving columns
+    if original_df is not None:
+        output_data["original_data"] = original_df.to_dict("records")
+        logger.info(f"Included {len(original_df.columns)} original columns in JSON output")
+
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=2, ensure_ascii=False)
 
 
-def write_excel_output(results: List[Dict[str, Any]], output_path: str, logger) -> None:
-    """Write results to Excel file."""
+def write_excel_output(
+    results: List[Dict[str, Any]],
+    output_path: str,
+    logger,
+    original_df: Optional[pd.DataFrame] = None,
+) -> None:
+    """Write results to Excel file, optionally preserving original columns."""
     logger.info(f"Writing Excel output to: {output_path}")
 
-    # Prepare data for Excel
-    excel_data = []
+    # Prepare parsed address data
+    parsed_data = []
     for result in results:
         row = {
-            "Original Address": result["original"],
-            "Street Number": result["parsed"].get("street_number", ""),
-            "Street Name": result["parsed"].get("street_name", ""),
-            "Street Type": result["parsed"].get("street_type", ""),
-            "City": result["parsed"].get("city", ""),
-            "State": result["parsed"].get("state", ""),
-            "ZIP Code": result["parsed"].get("zip_code", ""),
-            "Unit": result["parsed"].get("unit", ""),
-            "PO Box": result["parsed"].get("po_box", ""),
-            "Formatted Address": result["single_line"],
-            "Confidence Score": result["confidence"],
-            "Validation Status": "Valid" if result["valid"] else "Invalid",
-            "Issues": "; ".join(result["issues"]) if result["issues"] else "",
-            "Address Type": result["address_type"],
+            "Cleaned Original Address": result["original"],
+            "Cleaned Street Number": result["parsed"].get("street_number", ""),
+            "Cleaned Street Name": result["parsed"].get("street_name", ""),
+            "Cleaned Street Type": result["parsed"].get("street_type", ""),
+            "Cleaned City": result["parsed"].get("city", ""),
+            "Cleaned State": result["parsed"].get("state", ""),
+            "Cleaned ZIP Code": result["parsed"].get("zip_code", ""),
+            "Cleaned Unit": result["parsed"].get("unit", ""),
+            "Cleaned PO Box": result["parsed"].get("po_box", ""),
+            "Cleaned Formatted Address": result["single_line"],
+            "Cleaned Confidence Score": result["confidence"],
+            "Cleaned Validation Status": "Valid" if result["valid"] else "Invalid",
+            "Cleaned Issues": "; ".join(result["issues"]) if result["issues"] else "",
+            "Cleaned Address Type": result["address_type"],
         }
-        excel_data.append(row)
+        parsed_data.append(row)
+
+    parsed_df = pd.DataFrame(parsed_data)
+
+    # Merge with original DataFrame if provided
+    if original_df is not None and len(original_df) == len(parsed_df):
+        # Convert original column names to proper case for Excel
+        original_df_formatted = original_df.copy()
+        output_df = pd.concat(
+            [original_df_formatted.reset_index(drop=True), parsed_df.reset_index(drop=True)], axis=1
+        )
+        logger.info(f"Preserved {len(original_df.columns)} original columns in output")
+    else:
+        # Remove cleaned_ prefix for backward compatibility
+        output_df = parsed_df.copy()
+        output_df.columns = [col.replace("Cleaned ", "") for col in output_df.columns]
 
     # Write to Excel with formatting
-    df = pd.DataFrame(excel_data)
-
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
-        df.to_excel(writer, sheet_name="Addresses", index=False)
+        output_df.to_excel(writer, sheet_name="Addresses", index=False)
 
         # Add summary sheet
         stats = calculate_processing_stats(results)

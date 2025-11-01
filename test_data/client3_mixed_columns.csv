@@ -1,0 +1,7 @@
+ID,Street_Address,City_Name,State_Code,Postal_Code,Customer_Type,Last_Purchase,Notes
+101,"123 north main st","Austin","TX","78701-1234","Premium","2024-12-01","VIP customer"
+102,"456 south oak ave apt 3","Dallas","TX","75201","Standard","2024-11-15","Regular buyer"
+103,"PO BOX 789","Houston","TX","77001","Premium","2024-12-20","Wholesale account"
+104,"789 west pine road suite 200","San Antonio","TX","78201","Standard","2024-10-05","Bulk order"
+105,"321 east elm drive","Fort Worth","Texas","76101","Premium","2024-12-10","Preferred client"
+

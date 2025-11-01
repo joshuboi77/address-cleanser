@@ -1,0 +1,7 @@
+Transaction_ID,Account_Number,First_Name,Last_Name,Street_Number,Street_Name,Street_Type,Unit_Number,City,State,Zip_Code,Country,Phone,Email,Company,Job_Title,Registration_Date,Last_Login,Total_Orders,Total_Spent
+TXN001,ACC-1001,Alice,Williams,123,Main,Street,Apt 5A,Austin,TX,78701,USA,555-0101,alice@example.com,Acme Corp,Manager,2023-01-15,2025-01-20,45,12500.50
+TXN002,ACC-1002,Bob,Johnson,456,Oak,Avenue,Suite 200,Dallas,TX,75201,USA,555-0102,bob@example.com,Tech Inc,Developer,2023-02-20,2025-01-19,32,8750.25
+TXN003,ACC-1003,Charlie,Brown,PO Box,789,,,Houston,TX,77001,USA,555-0103,charlie@example.com,Startup LLC,Founder,2023-03-10,2025-01-18,15,3450.00
+TXN004,ACC-1004,Diana,Martinez,789,Pine,Road,Unit 12B,San Antonio,TX,78201,USA,555-0104,diana@example.com,Retail Co,Director,2023-04-05,2025-01-17,78,22100.75
+TXN005,ACC-1005,Edward,Kim,321,Elm,Drive,Floor 3,Fort Worth,TX,76101,USA,555-0105,edward@example.com,Service Corp,Analyst,2023-05-12,2025-01-16,23,5675.30
+

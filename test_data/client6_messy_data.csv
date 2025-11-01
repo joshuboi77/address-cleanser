@@ -1,0 +1,7 @@
+Order_ID,Customer_Name,Shipping_Address_Line_1,Shipping_Address_Line_2,Shipping_City,Shipping_State,Shipping_Zip,Shipping_Country,Billing_Address,Notes
+ORD-001,John Doe,"123 MAIN ST","APT #5A","AUSTIN","TX","78701","USA","Same as shipping","Express shipping requested"
+ORD-002,Jane Smith,"45 WEST 2ND STREET",,"NEW YORK","NY","10001","USA","45 West 2nd Street, NYC, NY 10001","Fragile - handle with care"
+ORD-003,Bob Wilson,"PO BOX 789",,"HOUSTON","TX","77001","USA","789 Pine Road, Houston TX 77001","Gift wrapping requested"
+ORD-004,Mary Davis,"900 N LAMAR BLVD","SUITE 210","AUSTIN","TEXAS","78703","USA","Same as shipping","Business address"
+ORD-005,Tom Anderson,"678 ELM STREET","APT 4B","SAN FRANCISCO","CA","94102","USA","678 Elm Street Apt 4B, San Francisco CA 94102","Signature required"
+

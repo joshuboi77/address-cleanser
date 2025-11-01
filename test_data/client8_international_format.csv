@@ -1,0 +1,6 @@
+Record_ID,Street,City_State_Zip,Contact_Phone,Email_Address,Business_Name
+R001,"123 Main Street","Austin, TX 78701",512-555-0101,contact1@business.com,Company A
+R002,"456 Oak Avenue","Dallas, TX 75201",214-555-0202,contact2@business.com,Company B
+R003,"PO Box 789","Houston, TX 77001",713-555-0303,contact3@business.com,Company C
+R004,"789 Pine Road Suite 100","San Antonio, TX 78201",210-555-0404,contact4@business.com,Company D
+

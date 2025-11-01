@@ -15,6 +15,8 @@ A Python CLI tool for parsing, validating, and formatting US addresses according
 - **Multiple Output Formats**: Supports CSV, JSON, and Excel output formats (input: CSV only)
 - **Batch Processing**: Process large CSV files with progress tracking
 - **Single Address Processing**: Process individual addresses from command line
+- **Column Preservation**: Preserve original CSV columns while adding cleaned address fields
+- **Flexible Input**: Accept addresses in a single column OR auto-detect and combine separate columns
 
 ## Quick Start
 
@@ -99,7 +101,10 @@ address-cleanser batch --input addresses.csv --output cleaned_addresses.csv --fo
 - `--input, -i`: Input CSV file path (required) - **Note: Only CSV files are supported as input**
 - `--output, -o`: Output file path (required)
 - `--format, -f`: Output format - csv, json, or excel (default: csv)
-- `--address-column, -c`: Name of the address column in CSV (default: address)
+- `--address-column, -c`: Name of the address column in CSV (auto-detected if not specified)
+- `--address-columns, -C`: Comma-separated list of columns to combine (e.g., `"Address,City,State,Zip"`)
+- `--preserve-columns, -p`: Preserve all original CSV columns in output
+- `--auto-combine, -a`: Auto-detect and combine separate address columns
 - `--report, -r`: Generate validation report file (optional)
 - `--chunk-size`: Process addresses in chunks of this size (default: 1000)
 
@@ -112,8 +117,20 @@ address-cleanser batch --input addresses.csv --output cleaned.csv --format csv
 # Process CSV file and output to Excel with validation report
 address-cleanser batch --input addresses.csv --output results.xlsx --format excel --report validation.txt
 
-# Process with custom address column name
+# Process with custom address column name (case-sensitive)
+address-cleanser batch --input data.csv --output output.csv --address-column "Address"
+
+# Example: If your CSV has "full_address" instead of "address"
 address-cleanser batch --input data.csv --output output.csv --address-column "full_address"
+
+# Process CSV with separate address columns and preserve original columns
+address-cleanser batch --input data.csv --output cleaned.csv --preserve-columns --auto-combine
+
+# Explicitly specify which columns to combine
+address-cleanser batch --input data.csv --output cleaned.csv --preserve-columns --address-columns "Address,City,State,Zip"
+
+# Preserve columns and output to Excel
+address-cleanser batch --input client_data.csv --output cleaned.xlsx --format excel --preserve-columns --auto-combine
 ```
 
 #### Single Address Processing
@@ -143,20 +160,52 @@ address-cleanser single --single "PO Box 123, Austin, TX 78701" --output result.
 
 **Input Requirements:** The CLI accepts **CSV files only** as input. Excel files (.xlsx) are not supported for input, but you can output to Excel format. To process an Excel file, first export it to CSV format.
 
-The CSV input file should have a column containing addresses. By default, the tool looks for a column named "address", but you can specify a different column name using the `--address-column` option.
+**Address Column Formats:** The tool supports two input formats:
 
-**Example CSV:**
+1. **Single Combined Column** (default): One column with complete address string
+   ```csv
+   address
+   123 Main Street, Austin, TX 78701
+   ```
+
+2. **Separate Columns**: Address components in multiple columns
+   ```csv
+   Address,City,State,Zip
+   123 Main Street,Austin,TX,78701
+   ```
+   Use `--auto-combine` to auto-detect and combine, or `--address-columns "Address,City,State,Zip"` to specify manually.
+
+**Column Detection:**
+- By default, looks for a column named `address` (case-sensitive, lowercase)
+- Use `--address-column` to specify a different single column name
+- Use `--auto-combine` to automatically detect and combine separate address columns
+- Use `--address-columns` to explicitly specify which columns to combine (comma-separated)
+
+**Column Preservation:**
+- Use `--preserve-columns` to keep all original CSV columns in the output
+- Original columns appear first, followed by `cleaned_*` columns with parsed/cleaned data
+- Perfect for maintaining client data structures while adding cleaned address fields
+
+**Example CSV Formats:**
+
+*Single combined column (preferred):*
 ```csv
 address
 123 Main Street, Austin, TX 78701
 456 Oak Avenue, Dallas, TX 75201
-PO Box 789, Houston, TX 77001
+```
+
+*Separate columns (also supported):*
+```csv
+Name,Address,City,State,Zip,Phone
+John Smith,123 Main St,Austin,TX,78701,555-0101
 ```
 
 ### Output Formats
 
 #### CSV Output
 
+**Standard Output** (without `--preserve-columns`):
 The CSV output includes the following columns:
 - `original_address`: Original input address
 - `street_number`: Parsed street number
@@ -173,8 +222,29 @@ The CSV output includes the following columns:
 - `issues`: List of validation issues
 - `address_type`: Type of address (Street Address, PO Box, etc.)
 
+**With Column Preservation** (using `--preserve-columns`):
+- **All original columns** are preserved in their original order
+- **New `cleaned_*` columns** are appended:
+  - `cleaned_original_address`
+  - `cleaned_street_number`
+  - `cleaned_street_name`
+  - `cleaned_street_type`
+  - `cleaned_city`
+  - `cleaned_state`
+  - `cleaned_zip_code`
+  - `cleaned_unit`
+  - `cleaned_po_box`
+  - `cleaned_formatted_address`
+  - `cleaned_confidence_score`
+  - `cleaned_validation_status`
+  - `cleaned_issues`
+  - `cleaned_address_type`
+
+This allows you to maintain your original data structure while adding cleaned address fields.
+
 #### JSON Output
 
+**Standard Output** (without `--preserve-columns`):
 The JSON output includes:
 - `results`: Array of processing results
 - `summary`: Processing statistics
@@ -191,10 +261,20 @@ Each result contains:
 - `issues`: List of issues
 - `address_type`: Address type
 
+**With Column Preservation** (using `--preserve-columns`):
+- `results`: Array of processing results (same as above)
+- `original_data`: Array of original CSV rows with all original columns
+- `summary`: Processing statistics
+- `timestamp`: Processing timestamp
+
 #### Excel Output
 
-The Excel output includes:
-- **Addresses sheet**: Same columns as CSV output
+**Standard Output** (without `--preserve-columns`):
+- **Addresses sheet**: Parsed address columns (Original Address, Street Number, etc.)
+- **Summary sheet**: Processing statistics and metrics
+
+**With Column Preservation** (using `--preserve-columns`):
+- **Addresses sheet**: All original columns + cleaned address columns (with "Cleaned " prefix)
 - **Summary sheet**: Processing statistics and metrics
 
 ## Understanding Results
@@ -282,6 +362,48 @@ Review addresses with:
 address-cleanser batch --input out/sample_input.csv --output results.csv --format csv --report report.txt
 ```
 
+### Working with Different CSV Structures
+
+**Example 1: CSV with separate address columns**
+```bash
+# Auto-detect and combine address columns, preserve all original columns
+address-cleanser batch \
+  --input client_data.csv \
+  --output cleaned.csv \
+  --preserve-columns \
+  --auto-combine
+```
+
+**Example 2: Explicitly specify which columns to combine**
+```bash
+# Combine specific columns and preserve original structure
+address-cleanser batch \
+  --input data.csv \
+  --output cleaned.csv \
+  --preserve-columns \
+  --address-columns "Address,City,State,Zip"
+```
+
+**Example 3: Combined address column (standard)**
+```bash
+# Standard processing with combined address column
+address-cleanser batch \
+  --input addresses.csv \
+  --output cleaned.csv \
+  --address-column "Full_Address"
+```
+
+**Example 4: Preserve columns and export to Excel**
+```bash
+# Maintain original structure, add cleaned fields, output to Excel
+address-cleanser batch \
+  --input client_data.csv \
+  --output cleaned.xlsx \
+  --format excel \
+  --preserve-columns \
+  --auto-combine
+```
+
 ### Processing Different Address Types
 
 The tool handles various address formats:
@@ -309,8 +431,12 @@ The tool validates:
 - **Solution**: Check file path and ensure file exists
 
 **Error: "Address column 'address' not found"**
-- **Cause**: CSV doesn't have expected column name
-- **Solution**: Use `--address-column` to specify correct column name
+- **Cause**: CSV doesn't have a column named "address" (column names are case-sensitive)
+- **Solution**: 
+  - Use `--address-column` to specify a single column name (e.g., `--address-column "Address"`)
+  - Use `--auto-combine` to auto-detect and combine separate address columns
+  - Use `--address-columns` to explicitly specify multiple columns to combine (e.g., `--address-columns "Address,City,State,Zip"`)
+- **Note**: Column names are case-sensitive and must match exactly
 
 **Error: "Invalid input file format"**
 - **Cause**: File is not a CSV
@@ -483,6 +609,16 @@ The tool handles various error conditions gracefully:
 - Geocoding capabilities
 - Web API endpoint
 - Docker containerization
+
+## Recent Updates
+
+### Version 1.0.12 Features
+
+- **Column Preservation**: Preserve original CSV columns with `--preserve-columns` flag
+- **Auto-Detection**: Automatically detect and combine separate address columns with `--auto-combine`
+- **Manual Column Combination**: Explicitly specify columns to combine with `--address-columns`
+- **Enhanced Output**: Original data structure maintained while adding cleaned address fields
+- **Flexible Input**: Now supports both single-column addresses and separate address components
 
 ## License
 

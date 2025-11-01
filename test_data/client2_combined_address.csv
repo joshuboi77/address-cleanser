@@ -1,0 +1,7 @@
+Customer_ID,Full_Address,Order_Date,Total_Amount,Status
+C001,"123 Main Street, Austin, TX 78701",2025-01-15,150.00,Shipped
+C002,"456 Oak Avenue, Dallas, TX 75201",2025-01-16,275.50,Processing
+C003,"789 Pine Road, Houston, TX 77001",2025-01-17,89.99,Delivered
+C004,"PO Box 123, San Antonio, TX 78201",2025-01-18,420.00,Shipped
+C005,"321 Elm Drive Apt 5B, Fort Worth, TX 76101",2025-01-19,199.99,Processing
+
