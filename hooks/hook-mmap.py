@@ -1,11 +1,6 @@
 # PyInstaller hook for mmap module
 # Ensures mmap extension module is included in the executable
 
-from PyInstaller.utils.hooks import collect_all, collect_submodules
-
-# Collect mmap as a hidden import
+# mmap is a built-in extension module, so we just need to ensure it's recognized
 hiddenimports = ['mmap']
-
-# Also collect any mmap-related modules
-datas, binaries, hiddenimports = collect_all('mmap', include_py_data=True)
 
