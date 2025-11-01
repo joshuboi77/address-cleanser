@@ -13,7 +13,7 @@ from .endpoints import router
 app = FastAPI(
     title="Address Cleanser API",
     description="REST API for parsing, validating, and formatting US addresses",
-    version="1.0.0",
+    version="1.0.12",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -36,7 +36,7 @@ async def root():
     """Root endpoint with API information."""
     return {
         "name": "Address Cleanser API",
-        "version": "1.0.0",
+        "version": "1.0.12",
         "docs": "/docs",
         "health": "/api/v1/health",
     }
