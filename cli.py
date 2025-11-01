@@ -8,7 +8,7 @@ in CSV, JSON, and Excel formats.
 import json
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import click
 import pandas as pd
@@ -191,7 +191,7 @@ def process_csv_file(
     auto_combine: bool,
     chunk_size: int,
     logger,
-) -> tuple[List[Dict[str, Any]], Optional[pd.DataFrame]]:
+) -> Tuple[List[Dict[str, Any]], Optional[pd.DataFrame]]:
     """
     Process addresses from a CSV file with enhanced column preservation.
 
