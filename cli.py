@@ -335,7 +335,9 @@ def process_csv_file(
 
     def _empty_result(orig: Any, issue: str) -> Dict[str, Any]:
         return {
-            "original": "" if (orig is None or (isinstance(orig, float) and pd.isna(orig))) else str(orig),
+            "original": (
+                "" if (orig is None or (isinstance(orig, float) and pd.isna(orig))) else str(orig)
+            ),
             "parsed": {},
             "formatted": {},
             "single_line": "",
@@ -436,9 +438,21 @@ def write_output(
     if format == "csv":
         write_csv_output(results, output_path, logger, original_df, csv_options or {})
     elif format == "json":
-        write_json_output(results, output_path, logger, original_df, encoding=(csv_options or {}).get("encoding", "utf-8"))
+        write_json_output(
+            results,
+            output_path,
+            logger,
+            original_df,
+            encoding=(csv_options or {}).get("encoding", "utf-8"),
+        )
     elif format == "excel":
-        write_excel_output(results, output_path, logger, original_df, encoding=(csv_options or {}).get("encoding", "utf-8"))
+        write_excel_output(
+            results,
+            output_path,
+            logger,
+            original_df,
+            encoding=(csv_options or {}).get("encoding", "utf-8"),
+        )
 
 
 def write_csv_output(
@@ -450,6 +464,7 @@ def write_csv_output(
 ) -> None:
     """Write results to CSV file, optionally preserving original columns."""
     import os
+
     csv_options = csv_options or {}
     delimiter = csv_options.get("delimiter", ",")
     encoding = csv_options.get("encoding", "utf-8")
@@ -487,7 +502,11 @@ def write_csv_output(
     if quoting_mode == csv.QUOTE_NONE:
         extra_to_csv["escapechar"] = "\\"
 
-    logger.info(f"Writing CSV output to: {output_path} (delimiter='{delimiter}', encoding='{encoding}', quoting='{quote_mode}', newline='{newline_opt}')")
+    logger.info(
+        f"Writing CSV output to: {output_path} "
+        f"(delimiter='{delimiter}', encoding='{encoding}', "
+        f"quoting='{quote_mode}', newline='{newline_opt}')"
+    )
 
     # Prepare parsed address data
     parsed_data = []
@@ -536,7 +555,8 @@ def write_csv_output(
         output_df = output_df[cols_to_keep]
         if len(cleaned_cols) != len(non_empty_cleaned):
             logger.info(
-                f"Removed {len(cleaned_cols) - len(non_empty_cleaned)} empty cleaned columns for cleaner output"
+                f"Removed {len(cleaned_cols) - len(non_empty_cleaned)} "
+                f"empty cleaned columns for cleaner output"
             )
 
     # Write to CSV with standard formatting
