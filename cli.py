@@ -50,6 +50,20 @@ def _suppress_cleanup_errors():
 # Register cleanup handler to suppress errors during exit
 atexit.register(_suppress_cleanup_errors)
 
+# In PyInstaller, redirect stderr early to catch bootloader errors
+if hasattr(sys, "frozen") and sys.frozen:
+    import io
+
+    # Store original stderr
+    _original_stderr = sys.stderr
+
+    def _redirect_stderr_on_cleanup():
+        """Redirect stderr to suppress cleanup errors."""
+        sys.stderr = io.StringIO()
+
+    # Register early
+    atexit.register(_redirect_stderr_on_cleanup)
+
 
 @click.group()
 @click.option(
