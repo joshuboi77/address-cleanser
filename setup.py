@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="address-cleanser",
-    version="1.0.25",
+    version="1.0.26",
     author="Address Cleanser Team",
     description="A CLI tool for parsing, validating, and formatting US addresses",
     long_description=long_description,
