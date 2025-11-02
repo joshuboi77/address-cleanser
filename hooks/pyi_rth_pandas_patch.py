@@ -29,19 +29,23 @@ def patched_import(name, globals=None, locals=None, fromlist=(), level=0):
     if name in ('pandas.testing', 'pandas._testing', 'pandas.tests'):
         return create_dummy_module(name)
     
-    # During cleanup, if we get FileNotFoundError for base_library.zip, suppress it
+    # Try normal import first
     try:
         return _original_import(name, globals, locals, fromlist, level)
     except (FileNotFoundError, OSError) as e:
-        # If the error is about base_library.zip or temp directory, create a dummy module
-        if 'base_library.zip' in str(e) or '_MEI' in str(e):
-            # We're in cleanup phase, create dummy to prevent cascade
-            import types
-            dummy = types.ModuleType(name)
-            sys.modules[name] = dummy
-            dummy.__file__ = None
-            return dummy
-        # Re-raise other errors
+        # Only catch errors related to base_library.zip during cleanup
+        # Check if error message mentions the temp directory or base_library.zip
+        error_str = str(e)
+        if 'base_library.zip' in error_str or ('_MEI' in error_str and '/base_library.zip' in error_str):
+            # We're in cleanup phase and temp directory is gone
+            # Create dummy module only for standard library or pandas modules
+            if name.startswith('pandas.') or name in ['logging', 'zipimport', 'importlib']:
+                import types
+                dummy = types.ModuleType(name)
+                sys.modules[name] = dummy
+                dummy.__file__ = None
+                return dummy
+        # For all other errors (including missing pycrfsuite, etc.), re-raise
         raise
 
 # Replace builtins.__import__ with our patched version
