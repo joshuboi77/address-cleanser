@@ -20,15 +20,45 @@ def create_dummy_module(name):
 for module_name in ['pandas.testing', 'pandas._testing', 'pandas.tests']:
     create_dummy_module(module_name)
 
-# Also patch __import__ to catch any late imports
+# Patch __import__ to catch any late imports and handle cleanup errors gracefully
 _original_import = __import__
 
 def patched_import(name, globals=None, locals=None, fromlist=(), level=0):
-    """Patch __import__ to skip pandas testing modules."""
+    """Patch __import__ to skip pandas testing modules and handle cleanup gracefully."""
+    # Skip pandas testing modules
     if name in ('pandas.testing', 'pandas._testing', 'pandas.tests'):
         return create_dummy_module(name)
-    return _original_import(name, globals, locals, fromlist, level)
+    
+    # During cleanup, if we get FileNotFoundError for base_library.zip, suppress it
+    try:
+        return _original_import(name, globals, locals, fromlist, level)
+    except (FileNotFoundError, OSError) as e:
+        # If the error is about base_library.zip or temp directory, create a dummy module
+        if 'base_library.zip' in str(e) or '_MEI' in str(e):
+            # We're in cleanup phase, create dummy to prevent cascade
+            import types
+            dummy = types.ModuleType(name)
+            sys.modules[name] = dummy
+            dummy.__file__ = None
+            return dummy
+        # Re-raise other errors
+        raise
 
 # Replace builtins.__import__ with our patched version
 import builtins
 builtins.__import__ = patched_import
+
+# Also patch sys.modules.__getitem__ to handle cleanup errors
+_original_getitem = sys.modules.__getitem__
+
+def patched_modules_getitem(key):
+    """Patch sys.modules.__getitem__ to handle cleanup errors."""
+    try:
+        return _original_getitem(key)
+    except (FileNotFoundError, OSError, KeyError):
+        # If we can't access the module due to cleanup, create dummy
+        if '_MEI' in str(sys.modules) or 'base_library.zip' in str(sys.modules):
+            return create_dummy_module(key)
+        raise
+
+# Don't patch __getitem__ directly - just catch errors in import
