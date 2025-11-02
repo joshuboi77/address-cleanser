@@ -57,6 +57,7 @@ def build_executable():
         "--hidden-import", "pandas.io.formats.format",
         "--runtime-hook", "hooks/pyi_rth_mmap.py",
         "--runtime-hook", "hooks/pyi_rth_cmath.py",
+        "--runtime-hook", "hooks/pyi_rth_pandas_patch.py",
         "--collect-submodules", "pandas.io",
         "--exclude-module", "pandas.tests",
         "--exclude-module", "pandas._testing",
