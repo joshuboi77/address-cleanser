@@ -22,6 +22,28 @@ if hasattr(sys, "frozen") and sys.frozen:
     sys._original_stderr = sys.stderr
     sys._null_stderr = io.StringIO()
 
+    # Track if we've completed successfully
+    sys._cleanup_mode = False
+
+    # Override excepthook to suppress cleanup errors
+    _original_excepthook = sys.excepthook
+
+    def _suppress_cleanup_exceptions(exc_type, exc_value, exc_traceback):
+        """Suppress exceptions during cleanup phase."""
+        # If we're in cleanup mode, suppress all exceptions silently
+        if getattr(sys, "_cleanup_mode", False):
+            # Check if it's a cleanup-related error
+            error_str = str(exc_value) if exc_value else ""
+            if any(
+                keyword in error_str for keyword in ["base_library.zip", "_MEI", "No such file"]
+            ):
+                # Silently ignore cleanup errors
+                return
+        # For non-cleanup errors, use original handler
+        _original_excepthook(exc_type, exc_value, exc_traceback)
+
+    sys.excepthook = _suppress_cleanup_exceptions
+
 import click
 import pandas as pd
 from tqdm import tqdm
@@ -52,6 +74,9 @@ def _suppress_cleanup_errors():
     """
     # Only suppress if we're in a PyInstaller environment
     if hasattr(sys, "frozen") and sys.frozen:
+        # Mark that we're entering cleanup mode
+        sys._cleanup_mode = True
+
         # Replace stderr with a null device during cleanup
         if hasattr(sys, "_null_stderr"):
             sys.stderr = sys._null_stderr
@@ -960,9 +985,10 @@ if __name__ == "__main__":
         # Run the CLI
         cli()
 
-        # After successful execution, suppress stderr for cleanup
+        # After successful execution, enter cleanup mode
         # This prevents PyInstaller bootloader from printing errors
         if hasattr(sys, "frozen") and sys.frozen:
+            sys._cleanup_mode = True
             if hasattr(sys, "_null_stderr"):
                 sys.stderr = sys._null_stderr
             else:
