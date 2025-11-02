@@ -52,6 +52,9 @@ def build_executable():
         "--hidden-import", "tqdm",
         "--hidden-import", "psutil",
         "--hidden-import", "mmap",
+        "--hidden-import", "_mmap",
+        "--hidden-import", "pandas.io.common",
+        "--hidden-import", "pandas.io.formats.format",
         "--collect-all", "usaddress",
         "--collect-all", "pandas",
         "cli.py"
