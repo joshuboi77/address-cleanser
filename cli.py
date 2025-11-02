@@ -683,10 +683,58 @@ def write_csv_output(
         # Map cleaned components to original columns
         column_mapping = _create_column_mapping(original_df.columns, parsed_df)
 
-        # Update each mapped column with cleaned data
+        # Update each mapped column with cleaned data, but only if parsing was successful
         for orig_col, cleaned_col in column_mapping.items():
             if cleaned_col in parsed_df.columns:
-                output_df[orig_col] = parsed_df[cleaned_col]
+                orig_col_lower = orig_col.lower()
+
+                # For each row, only update if parsing was reasonably successful
+                for idx in range(len(output_df)):
+                    confidence = parsed_df["cleaned_confidence_score"].iloc[idx]
+                    is_valid = parsed_df["cleaned_validation_status"].iloc[idx] == "Valid"
+                    cleaned_value = parsed_df[cleaned_col].iloc[idx]
+                    original_value = output_df.loc[idx, orig_col]
+
+                    # Sanity checks for specific column types
+                    should_update = False
+
+                    if pd.notna(cleaned_value) and str(cleaned_value).strip() != "":
+                        cleaned_str = str(cleaned_value)
+
+                        # For State columns: reject if contains comma or numbers
+                        if "state" in orig_col_lower:
+                            if "," in cleaned_str or any(c.isdigit() for c in cleaned_str):
+                                logger.debug(
+                                    f"Row {idx}: Keeping original State '{original_value}' "
+                                    f"(cleaned value '{cleaned_str}' looks invalid)"
+                                )
+                                continue
+
+                        # For Zip columns: reject if it doesn't look like a ZIP
+                        if any(word in orig_col_lower for word in ["zip", "postal"]):
+                            # ZIP should be mostly digits
+                            if not any(c.isdigit() for c in cleaned_str):
+                                logger.debug(
+                                    f"Row {idx}: Keeping original Zip '{original_value}' "
+                                    f"(cleaned value '{cleaned_str}' has no digits)"
+                                )
+                                continue
+
+                        # Update if valid OR high confidence
+                        if is_valid or confidence >= 70:
+                            should_update = True
+                        # For invalid addresses, only update if confidence is very high (formatting fixes)
+                        elif not is_valid and confidence >= 85:
+                            should_update = True
+                        else:
+                            logger.debug(
+                                f"Row {idx}: Keeping original '{orig_col}' = '{original_value}' "
+                                f"(cleaned '{cleaned_str}' confidence: {confidence}, valid: {is_valid})"
+                            )
+
+                    if should_update:
+                        output_df.loc[idx, orig_col] = cleaned_value
+
                 logger.debug(f"Mapped '{orig_col}' <- '{cleaned_col}'")
 
         logger.info(
