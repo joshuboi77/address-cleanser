@@ -5,8 +5,9 @@ This module provides a CLI interface using Click for processing addresses
 in CSV, JSON, and Excel formats.
 """
 
-import csv
 import atexit
+import csv
+import io
 import json
 import os
 import sys
@@ -15,28 +16,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import click
 import pandas as pd
 from tqdm import tqdm
-
-
-def _suppress_cleanup_errors():
-    """
-    Suppress PyInstaller cleanup errors during shutdown.
-    
-    This is a workaround for a known PyInstaller onefile mode issue where
-    the temporary directory is deleted while Python is still trying to
-    access modules during cleanup, causing FileNotFoundError.
-    
-    The error is cosmetic and occurs after successful execution, so we
-    suppress stderr during cleanup to prevent error messages.
-    """
-    # Only suppress if we're in a PyInstaller environment
-    if hasattr(sys, 'frozen') and sys.frozen:
-        import io
-        # Replace stderr with a null device during cleanup
-        sys.stderr = io.StringIO()
-
-
-# Register cleanup handler to suppress errors during exit
-atexit.register(_suppress_cleanup_errors)
 
 from src.formatter import create_formatted_address_result
 from src.parser import handle_edge_cases, parse_address
@@ -49,6 +28,27 @@ from src.utils import (
     validate_file_extension,
 )
 from src.validator import validate_address
+
+
+def _suppress_cleanup_errors():
+    """
+    Suppress PyInstaller cleanup errors during shutdown.
+
+    This is a workaround for a known PyInstaller onefile mode issue where
+    the temporary directory is deleted while Python is still trying to
+    access modules during cleanup, causing FileNotFoundError.
+
+    The error is cosmetic and occurs after successful execution, so we
+    suppress stderr during cleanup to prevent error messages.
+    """
+    # Only suppress if we're in a PyInstaller environment
+    if hasattr(sys, "frozen") and sys.frozen:
+        # Replace stderr with a null device during cleanup
+        sys.stderr = io.StringIO()
+
+
+# Register cleanup handler to suppress errors during exit
+atexit.register(_suppress_cleanup_errors)
 
 
 @click.group()
