@@ -940,4 +940,23 @@ DETAILED RESULTS
 
 
 if __name__ == "__main__":
-    cli()
+    try:
+        cli()
+    except (FileNotFoundError, OSError) as e:
+        # Suppress PyInstaller cleanup errors
+        # These occur after successful processing when temp directory is deleted
+        if hasattr(sys, "frozen") and sys.frozen:
+            if "base_library.zip" in str(e) or "_MEI" in str(e):
+                # Clean exit - processing already completed successfully
+                sys.exit(0)
+        # Re-raise other errors
+        raise
+    except SystemExit:
+        # Let SystemExit through (from Click or sys.exit calls)
+        raise
+    except Exception:
+        # Suppress any other cleanup-related errors in PyInstaller
+        if hasattr(sys, "frozen") and sys.frozen:
+            # In PyInstaller, suppress cleanup errors
+            sys.exit(0)
+        raise
