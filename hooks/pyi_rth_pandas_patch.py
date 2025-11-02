@@ -38,14 +38,17 @@ def patched_import(name, globals=None, locals=None, fromlist=(), level=0):
         return _original_import(name, globals, locals, fromlist, level)
     except (FileNotFoundError, OSError) as e:
         # Only catch errors related to base_library.zip during cleanup
-        # Check if error message mentions the temp directory or base_library.zip
         error_str = str(e)
         if "base_library.zip" in error_str or (
             "_MEI" in error_str and "/base_library.zip" in error_str
         ):
             # We're in cleanup phase and temp directory is gone
-            # Only create dummy for pandas testing modules, NOT standard library
-            # Standard library modules should fail naturally; atexit handler will suppress stderr
+            # Suppress stderr immediately to prevent error message
+            import io
+
+            sys.stderr = io.StringIO()
+
+            # Only create dummy for pandas testing modules
             if name.startswith("pandas.") and (
                 "testing" in name or "_testing" in name or "tests" in name
             ):
@@ -55,8 +58,19 @@ def patched_import(name, globals=None, locals=None, fromlist=(), level=0):
                 sys.modules[name] = dummy
                 dummy.__file__ = None
                 return dummy
-            # For standard library (logging, zipimport, etc.), just re-raise
-            # The atexit handler in cli.py will suppress stderr during cleanup
+
+            # For standard library (logging, zipimport, etc.), suppress error silently
+            # Create a minimal dummy module to prevent cascade
+            import types
+
+            dummy = types.ModuleType(name)
+            sys.modules[name] = dummy
+            dummy.__file__ = None
+            # Add basic attributes if it's logging
+            if name == "logging":
+                dummy.getLogger = lambda *args, **kwargs: dummy
+            return dummy
+
         # For all other errors (including missing pycrfsuite, etc.), re-raise
         raise
 
