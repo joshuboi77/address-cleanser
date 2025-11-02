@@ -52,11 +52,14 @@ def build_executable():
         "--hidden-import", "tqdm",
         "--hidden-import", "psutil",
         "--hidden-import", "mmap",
+        "--hidden-import", "cmath",
         "--hidden-import", "pandas.io.common",
         "--hidden-import", "pandas.io.formats.format",
         "--runtime-hook", "hooks/pyi_rth_mmap.py",
         "--collect-submodules", "pandas.io",
-        "--exclude-module", "test",  # Don't exclude standard library
+        "--exclude-module", "pandas.tests",
+        "--exclude-module", "pandas._testing",
+        "--exclude-module", "test",
         "--collect-all", "usaddress",
         "--collect-all", "pandas",
         "cli.py"
