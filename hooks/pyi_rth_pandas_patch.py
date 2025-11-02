@@ -44,14 +44,19 @@ def patched_import(name, globals=None, locals=None, fromlist=(), level=0):
             "_MEI" in error_str and "/base_library.zip" in error_str
         ):
             # We're in cleanup phase and temp directory is gone
-            # Create dummy module only for standard library or pandas modules
-            if name.startswith("pandas.") or name in ["logging", "zipimport", "importlib"]:
+            # Only create dummy for pandas testing modules, NOT standard library
+            # Standard library modules should fail naturally; atexit handler will suppress stderr
+            if name.startswith("pandas.") and (
+                "testing" in name or "_testing" in name or "tests" in name
+            ):
                 import types
 
                 dummy = types.ModuleType(name)
                 sys.modules[name] = dummy
                 dummy.__file__ = None
                 return dummy
+            # For standard library (logging, zipimport, etc.), just re-raise
+            # The atexit handler in cli.py will suppress stderr during cleanup
         # For all other errors (including missing pycrfsuite, etc.), re-raise
         raise
 
