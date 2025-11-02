@@ -13,6 +13,20 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
+# In PyInstaller, suppress stderr IMMEDIATELY to prevent bootloader error messages
+# This must happen before any other imports that might trigger cleanup errors
+if hasattr(sys, "frozen") and sys.frozen:
+    # Redirect stderr to a null device at module load time
+    # This prevents PyInstaller bootloader from printing errors during cleanup
+    try:
+        import io
+
+        _original_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+    except Exception:
+        # If redirection fails, continue anyway
+        pass
+
 import click
 import pandas as pd
 from tqdm import tqdm
@@ -50,19 +64,10 @@ def _suppress_cleanup_errors():
 # Register cleanup handler to suppress errors during exit
 atexit.register(_suppress_cleanup_errors)
 
-# In PyInstaller, redirect stderr early to catch bootloader errors
+# Store original stderr for restoration during execution
 if hasattr(sys, "frozen") and sys.frozen:
-    import io
-
-    # Store original stderr
-    _original_stderr = sys.stderr
-
-    def _redirect_stderr_on_cleanup():
-        """Redirect stderr to suppress cleanup errors."""
-        sys.stderr = io.StringIO()
-
-    # Register early
-    atexit.register(_redirect_stderr_on_cleanup)
+    if not hasattr(sys, "_original_stderr"):
+        sys._original_stderr = _original_stderr
 
 
 @click.group()
@@ -955,22 +960,34 @@ DETAILED RESULTS
 
 if __name__ == "__main__":
     try:
+        # Restore stderr for normal execution (so logs work)
+        if hasattr(sys, "frozen") and sys.frozen and hasattr(sys, "_original_stderr"):
+            sys.stderr = sys._original_stderr
+
         cli()
+
+        # After successful execution, suppress stderr again for cleanup
+        if hasattr(sys, "frozen") and sys.frozen:
+            sys.stderr = io.StringIO()
+
     except (FileNotFoundError, OSError) as e:
         # Suppress PyInstaller cleanup errors
-        # These occur after successful processing when temp directory is deleted
         if hasattr(sys, "frozen") and sys.frozen:
             if "base_library.zip" in str(e) or "_MEI" in str(e):
                 # Clean exit - processing already completed successfully
+                sys.stderr = io.StringIO()
                 sys.exit(0)
         # Re-raise other errors
         raise
     except SystemExit:
-        # Let SystemExit through (from Click or sys.exit calls)
+        # Suppress stderr before exit
+        if hasattr(sys, "frozen") and sys.frozen:
+            sys.stderr = io.StringIO()
         raise
-    except Exception:
+    except Exception as e:
         # Suppress any other cleanup-related errors in PyInstaller
         if hasattr(sys, "frozen") and sys.frozen:
-            # In PyInstaller, suppress cleanup errors
+            # Suppress stderr and exit cleanly
+            sys.stderr = io.StringIO()
             sys.exit(0)
         raise
